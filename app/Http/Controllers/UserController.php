@@ -629,6 +629,30 @@ Web link: MGES.GLOBAL';
     return response()->json(['message' => 'User or file not found'], 404);
 }
 
+public function checkUplaodVerifiedCertificate(Request $request)
+{
+    // Validate the file
+   
+
+    // Retrieve the authenticated user's candidate record
+    $user = Candidate::where('user_id', auth()->user()->id)->first();
+
+    if ($user && $user->verified_certificate) {
+        // Get and set the verified certificate URL
+  
+
+        return response()->json([
+            'message' => 'File uploaded successfully',
+            'isVerified' => true,
+        ], 200);
+    }
+
+    return response()->json(['message' => 'Not Verfied',  'isVerified' => false]);
+
+}
+
+
+
 public function getVerifiedCertificateUrl($request)
 {
     $image = $request->file('file');

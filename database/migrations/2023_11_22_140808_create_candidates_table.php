@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->integer('user_id')->nullable();
             $table->string('gender')->nullable();
+            $table->string('verified_certificate');
             $table->string('marital_status')->nullable();
             $table->string('issued_by')->nullable();
             $table->string('firstName')->nullable();
