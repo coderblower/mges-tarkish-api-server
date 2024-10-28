@@ -1,4 +1,4 @@
-<?php
+mges_global_backend<?php
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CandidateController;
@@ -63,6 +63,7 @@ Route::group(['name'=>'User','middleware' => 'api','prefix' => 'user'], function
     Route::post('/count', [UserController::class, 'count']);
     Route::post('/group_by', [UserController::class, 'groupBy']);
     Route::post('/search_candidate', [UserController::class, 'searchCandidate']);
+    Route::post('/upload_verified_certificate', [UserController::class, 'uplaodVerifiedCertificate']);
 });
 Route::group(['name'=>'Role','middleware' => 'api','prefix' => 'role'], function () {
     Route::post('/all', [RoleController::class, 'all']);

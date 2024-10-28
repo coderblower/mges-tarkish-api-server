@@ -602,6 +602,46 @@ Web link: MGES.GLOBAL';
             ]);
         }
     }
+    public function uplaodVerifiedCertificate(Request $request)
+{
+    // Validate the file
+    $request->validate([
+        'file' => 'required|mimes:pdf,jpg,jpeg,png|max:2048', // Adjust types and max size as needed
+    ]);
+
+    // Retrieve the authenticated user's candidate record
+    $user = Candidate::where('user_id', auth()->user()->id)->first();
+
+    if ($user && $request->hasFile('file')) {
+        // Get and set the verified certificate URL
+        $user->verified_certificate = $this->getVerifiedCertificateUrl($request);
+
+        // Update the user's verified certificate in the database
+        $user->save();
+        Log::info('saved', ['saved' => $user]);
+
+        return response()->json([
+            'message' => 'File uploaded successfully',
+            'verified_certificate_url' => $user->verified_certificate,
+        ], 200);
+    }
+
+    return response()->json(['message' => 'User or file not found'], 404);
+}
+
+public function getVerifiedCertificateUrl($request)
+{
+    $image = $request->file('file');
+    $imageName = time() . '_' . $image->getClientOriginalName();
+    $path = 'candidate_photos/';
+
+    // Move the file to the specified path
+    $image->move(public_path($path), $imageName);
+
+    // Return the relative URL of the uploaded file
+    return $path . $imageName;
+}
+
     public function getTrainingUrl($request)
     {
         $image = $request->file('training_file');
