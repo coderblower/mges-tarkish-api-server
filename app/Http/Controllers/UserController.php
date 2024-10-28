@@ -8,6 +8,8 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
+use Illuminate\Support\Facades\Log;
+
 
 class UserController extends Controller
 {
@@ -15,153 +17,140 @@ class UserController extends Controller
     {
         $this->middleware('auth:api', ['except' => ['create', 'getUser', 'groupBy', 'approveCandidatesWithAllDocuments']]);
     }
-    public function create(Request $request){
-//        return response()->json($request);
-        $req = Validator::make($request->all(), [
+
+    public function create(Request $request)
+    {
+
+        // Validation rules
+        $validator = Validator::make($request->all(), [
             'name' => 'required|string',
             'email' => 'required|string|unique:users',
             'phone' => 'required|string|min:11|unique:users',
             'password' => 'required|string|min:6',
         ]);
-        try {
-            if ($req->fails()) {
-//                return response()->json($req->errors(), 422);
-                return response()->json([
-                    'success' => false,
-                    'message' => $req->errors(),
-                    'error' => $req->errors(),
-                ]);
-            }else{
-                $user = new User();
-                $user->name = $request->name;
-                $user->email = $request->email;
-                $user->phone = $request->phone;
-                $user->created_by = auth()->user()?auth()->user()->id:$user->id;
-                $user->role_id = 5;
-                $user->password = bcrypt($request->password);
-                $user->save();
-                $user_id = $user->id;
-//                $quota = Quota::where('country_id', $request->country)->where('designation_id', $request->designation_id)->where('agent', auth()->user()->id)->first();
 
-//                if (auth()->user()->role_id == 4){
-//                    $quota = Quota::where('country_id', $request->country)->where('designation_id', $request->designation_id)->where('agent', auth()->user()->id)->first();
-//                    if ($quota && $quota->quota != 0){
-//                        $used = $quota->quota_used;
-//                        $quota->quota_used = $used + 1;
-//                        $quota->update();
-//                        if ($quota->quota_used == 0){
-//                            return response()->json([
-//                                'success' => false,
-//                                'msg' => 'quota problem',
-//                            ]);
-//                        }
-//                    }else{
-//                        return response()->json([
-//                            'success' => false,
-//                            'msg' => 'quota problem2',
-//                        ]);
-//                    }
-//                }else{
-//                    return response()->json([
-//                        'success' => false,
-//                        'msg' => 'role problem',
-//                    ]);
-//                }
-
-                if ($request->has('role_id')){
-                    $user->role_id = $request->role_id;
-
-                }else{
-                    $user->role_id = 5;
-                    try {
-                        $req1 = Validator::make($request->all(), [
-                            'passport' => 'required|unique:candidates',
-                        ]);
-                        if ($req1->fails()) {
-//                            return response()->json($req1->errors(), 422);
-                            return response()->json([
-                                'success' => false,
-                                'message' => $req1->errors(),
-                                'error' => $req1->errors(),
-                            ]);
-                        }else {
-                            $data = new Candidate();
-                            $data->user_id = $user_id;
-                            $data->gender = $request->gender;
-                            $data->marital_status = $request->marital_status;
-                            $data->issued_by = $request->issued_by;
-                            $data->referred_by = $request->referred_by;
-                            $data->firstName = $request->firstName;
-                            $data->lastName = $request->lastName;
-                            $data->dateOfIssue = $request->dateOfIssue;
-                            $data->visitRussiaNumber = $request->visitRussiaNumber;
-                            $data->russia_trip_date = $request->russia_trip_date;
-                            $data->hostOrganization = $request->hostOrganization;
-                            $data->route_Journey = $request->route_Journey;
-                            $data->relativesStaying = $request->relativesStaying;
-                            $data->refusedRussian = $request->refusedRussian;
-                            $data->deportedRussia = $request->deportedRussia;
-                            $data->spousesName = $request->spousesName;
-                            $data->spouses_birth_date = $request->spouses_birth_date;
-                            $data->full_name = $request->full_name;
-                            $data->father_name = $request->father_name;
-                            $data->mother_name = $request->mother_name;
-                            $data->birth_date = $request->birth_date;
-                            $data->religion = $request->religion;
-                            $data->country = $request->country;
-                            $data->nid = $request->nid;
-                            $data->nid_file = $request->nid_file ? $this->getNidUrl($request) : null;
-                            $data->passport = $request->passport;
-                            $data->expiry_date = $request->expiry_date;
-                            $data->medical_center_id = $request->medical_center_id;
-                            $data->designation_id = $request->designation_id;
-                            $data->address = json_encode($request->address);
-                            $data->city = $request->city;
-                            $data->academic = json_encode($request->academic);
-                            $data->experience = json_encode($request->experience);
-                            $data->training = json_encode($request->training);
-                            if (auth()->user()->role_id ==1){
-                                $data->approval_status = 'approved';
-                            }
-//                        $data->medical_status = $request->medical_status;
-//                        $data->training_status = $request->training_status;
-                            $data->is_active = $request->is_active ? $request->is_active : 0;
-                            $data->photo = $request->photo ? $this->getImageUrl($request) : null;
-                            $data->passport_file = $request->passport_file ? $this->getPassportUrl($request) : null;
-                            $data->experience_file = $request->experience_file ? $this->getExpUrl($request) : null;
-                            $data->academic_file = $request->academic_file ? $this->getAcademicUrl($request) : null;
-                            $data->training_file = $request->training_file ? $this->getTrainingUrl($request) : null;
-                            $data->qr_code = $this->getQRUrl($user_id);
-                            $data->save();
-                        }
-                    }catch (\Exception $e) {
-                        return response()->json([
-                            'success' => false,
-                            'message' => 'failed at Candidate!',
-                            'error' => $e->getMessage(),
-                        ]);
-                    }
-                }
-                $user->created_by = auth()->user()? auth()->user()->id : $user->id;
-                $user->update();
-                $msg = $this->getMsg($request, $user);
-                $smsResponse = $this->send_sms($request, $msg);
-                return response()->json([
-                    'success' => true,
-                    'message' => 'successfully created candidate!',
-                    'smsResponse' => $smsResponse,
-                    'data' => $user,
-                ]);
-            }
-        }catch (\Exception $e) {
+        // Return validation error response if validation fails
+        if ($validator->fails()) {
             return response()->json([
                 'success' => false,
-                'message' => 'failed!',
-//                'error' => 'failed!',
+                'message' => $validator->errors(),
+                'error' => $validator->errors(),
+            ]);
+        }
+
+        try {
+            // Create the user
+            $user = new User();
+            $user->name = $request->name;
+            $user->email = $request->email;
+            $user->phone = $request->phone;
+            $user->created_by = auth()->user() ? auth()->user()->id : null;
+            $user->role_id = $request->role_id ?? 5;  // Default to role_id = 5
+            $user->password = bcrypt($request->password);
+            $user->save();
+
+            // Additional validation for role 5 (candidate creation)
+            if ($user->role_id == 5) {
+                $candidateValidator = Validator::make($request->all(), [
+                    'passport' => 'required|unique:candidates',
+                ]);
+
+                if ($candidateValidator->fails()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => $candidateValidator->errors(),
+                        'error' => $candidateValidator->errors(),
+                    ]);
+                }
+
+                // Create candidate
+                $candidate = $this->createCandidate($request, $user->id);
+            }
+
+            // Update user's created_by and send SMS
+            $user->created_by = auth()->user() ? auth()->user()->id : $user->id;
+            $user->update();
+
+            $msg = $this->getMsg($request, $user);
+            $smsResponse = $this->send_sms($request, $msg);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Successfully created candidate!',
+                'smsResponse' => $smsResponse,
+                'data' => $user,
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error occurred during user creation!',
                 'error' => $e->getMessage(),
             ]);
         }
     }
+
+    // Extracted method to handle candidate creation
+    private function createCandidate(Request $request, $userId)
+    {
+        try {
+            $candidate = new Candidate();
+            $candidate->user_id = $userId;
+            $candidate->gender = $request->gender;
+            $candidate->marital_status = $request->marital_status;
+            $candidate->issued_by = $request->issued_by;
+            $candidate->referred_by = $request->referred_by;
+            $candidate->firstName = $request->firstName;
+            $candidate->lastName = $request->lastName;
+            $candidate->dateOfIssue = trim($request->dateOfIssue, '"');
+            $candidate->visitRussiaNumber = $request->visitRussiaNumber;
+            $candidate->russia_trip_date = trim($request->russia_trip_date, '"');
+            $candidate->hostOrganization = $request->hostOrganization;
+            $candidate->route_Journey = $request->route_Journey;
+            $candidate->relativesStaying = $request->relativesStaying;
+            $candidate->refusedRussian = $request->refusedRussian;
+            $candidate->deportedRussia = $request->deportedRussia;
+            $candidate->spousesName = $request->spousesName;
+            $candidate->spouses_birth_date = trim($request->spouses_birth_date, '"');
+            $candidate->full_name = $request->full_name;
+            $candidate->father_name = $request->father_name;
+            $candidate->mother_name = $request->mother_name;
+            $candidate->birth_date = trim($request->birth_date, '"');
+            $candidate->religion = $request->religion;
+            $candidate->country = $request->country;
+            $candidate->nid = $request->nid;
+            $candidate->nid_file = $request->nid_file ? $this->getNidUrl($request) : null;
+            $candidate->passport = $request->passport;
+            $candidate->expiry_date = trim($request->expiry_date, '"');
+            $candidate->medical_center_id = $request->medical_center_id;
+            $candidate->designation_id = $request->designation_id;
+            $candidate->address = json_encode($request->address);
+            $candidate->city = $request->city;
+            $candidate->academic = json_encode($request->academic);
+            $candidate->experience = json_encode($request->experience);
+            $candidate->training = json_encode($request->training);
+            $candidate->is_active = $request->is_active ?? 0;
+            $candidate->photo = $request->photo ? $this->getImageUrl($request) : null;
+            $candidate->passport_file = $request->passport_file ? $this->getPassportUrl($request) : null;
+            $candidate->experience_file = $request->experience_file ? $this->getExpUrl($request) : null;
+            $candidate->academic_file = $request->academic_file ? $this->getAcademicUrl($request) : null;
+            $candidate->training_file = $request->training_file ? $this->getTrainingUrl($request) : null;
+            $candidate->qr_code = $this->getQRUrl($userId);
+
+            // If the user is an admin, automatically approve
+            if (auth()->user()->role_id == 1) {
+                $candidate->approval_status = 'approved';
+            }
+
+            $candidate->save();
+
+            return $candidate;
+
+        } catch (\Exception $e) {
+            throw new \Exception('Failed to create candidate: ' . $e->getMessage());
+        }
+    }
+
     public function update(Request $request){
         $req = Validator::make($request->all(), [
             'name' => 'required|string',
@@ -413,6 +402,7 @@ class UserController extends Controller
     public function getImageUrl($request)
     {
         $image = $request->file('photo');
+
         $imageName = time() . $image->getClientOriginalName();
         $path = 'candidate_photos/';
         $image->move($path, $imageName);
@@ -496,10 +486,10 @@ Web link: MGES.GLOBAL';
                     ->orWhereHas('candidate', function ($query) use ($request) {
                         $query->where('passport', 'like', "%$request->phone%");});
             })
-
+                ->with('createdBy')
                 ->WhereHas('candidate', function ($query) use ($request) {
                     $query->orderBy('updated_at', 'desc');})
-                ->with('createdBy')
+
 
                 ->paginate(10);
             $results1 = User::with('candidate')
