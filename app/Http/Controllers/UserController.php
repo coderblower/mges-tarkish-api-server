@@ -120,6 +120,7 @@ class UserController extends Controller
             $candidate->country = $request->country;
             $candidate->nid = $request->nid;
             $candidate->nid_file = $request->nid_file ? $this->getNidUrl($request) : null;
+            $candidate->pif_file = $request->pif_file ? $this->getPifUrl($request) : null;
             $candidate->passport = $request->passport;
             $candidate->expiry_date = trim($request->expiry_date, '"');
             $candidate->medical_center_id = $request->medical_center_id;
@@ -682,6 +683,16 @@ public function getVerifiedCertificateUrl($request)
         $image->move($path, $imageName);
         return $path.$imageName;
     }
+    
+    public function getPifUrl($request)
+    {
+        $image = $request->file('pif_file');
+        $imageName = time(). $image->getClientOriginalName();
+        $path = 'candidate_photos/';
+        $image->move($path, $imageName);
+        return $path.$imageName;
+    }
+    
     public function getAcademicUrl($request)
     {
         $image = $request->file('academic_file');

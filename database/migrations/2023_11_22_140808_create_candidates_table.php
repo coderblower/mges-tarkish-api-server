@@ -38,6 +38,7 @@ return new class extends Migration
             $table->string('religion')->nullable();
             $table->string('nid')->nullable();
             $table->string('nid_file')->nullable();
+            $table->string(' pif_file')->nullable();
             $table->string('passport')->nullable();
             $table->string('expiry_date')->nullable();
             $table->string('passport_file')->nullable();
