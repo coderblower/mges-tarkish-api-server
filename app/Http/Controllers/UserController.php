@@ -475,69 +475,61 @@ Web link: MGES.GLOBAL';
     {
         // Start measuring time
         $startTime = microtime(true);
-
-        // Define base query with common relationships and filters
-        $baseQuery = User::with(['candidate', 'createdBy'])
-            ->where('role_id', 5)
-            ->when($request->has('creator'), function ($query) use ($request) {
-                $query->where('created_by', $request->creator);
-            })
-            
-            ->when($request->filled('country'), function ($query) use ($request) {
-                $query->whereHas('candidate', function ($query) use ($request) {
-                    $query->where('country', $request->country);
-                });
-            })
-            ->when($request->filled('phone'), function ($query) use ($request) {
-                $query->where(function ($query) use ($request) {
-                    $query->where('phone', 'like', "%{$request->phone}%")
-                          ->orWhere('email', 'like', "%{$request->phone}%")
-                          ->orWhereHas('candidate', function ($query) use ($request) {
-                              $query->where('passport', 'like', "%{$request->phone}%");
-                          });
-                });
-            });
-
-        // Apply additional role-specific filters
-        if (auth()->user()->role_id == 1 || auth()->user()->role_id == 3) {
-            $results = (clone $baseQuery)
-                ->whereHas('candidate', function ($query) {
-                    $query->orderBy('updated_at', 'desc');
-                })
-                ->paginate(10);
-
-            // $resultsCount = (clone $baseQuery)->count();
-        } elseif (auth()->user()->role_id == 2) {
-            $results = (clone $baseQuery)
-                ->whereHas('candidate', function ($query) {
-                    $query->orderBy('updated_at', 'desc');
-                })
-                ->get();
-
-            $resultsCount = (clone $baseQuery)->count();
-        } else {
-            $results = (clone $baseQuery)
-                ->where('created_by', auth()->user()->id)
-                ->whereHas('candidate', function ($query) {
-                    $query->orderBy('updated_at', 'desc');
-                })
-                ->get();
-
-            $resultsCount = (clone $baseQuery)
-                ->where('created_by', auth()->user()->id)
-                ->count();
+    
+        // Base query
+        $query = User::with(['candidate:id,user_id,passport,country', 'createdBy:id,name'])
+            ->where('role_id', 5);
+    
+        // Check for 'creator' parameter
+        if ($request->filled('creator')) {
+            $query->where('created_by', $request->creator);
         }
-
-        // End measuring time
+    
+        // Check for 'country' parameter using whereExists
+        if ($request->filled('country')) {
+            $query->whereExists(function ($q) use ($request) {
+                $q->select(DB::raw(1))
+                  ->from('candidates')
+                  ->whereColumn('candidates.user_id', 'users.id')
+                  ->where('country', $request->country);
+            });
+        }
+    
+        // Check for 'phone' parameter
+        if ($request->filled('phone')) {
+            $phoneSearch = "%{$request->phone}%";
+            $query->where(function ($q) use ($phoneSearch) {
+                $q->where('phone', 'like', $phoneSearch)
+                  ->orWhere('email', 'like', $phoneSearch)
+                  ->orWhereExists(function ($q) use ($phoneSearch) {
+                      $q->select(DB::raw(1))
+                        ->from('candidates')
+                        ->whereColumn('candidates.user_id', 'users.id')
+                        ->where('passport', 'like', $phoneSearch);
+                  });
+            });
+        }
+    
+        // Role-specific conditions
+        if (auth()->user()->role_id == 1 || auth()->user()->role_id == 3) {
+            $results = $query->orderBy('updated_at', 'desc')->paginate(10);
+        } elseif (auth()->user()->role_id == 2) {
+            $results = $query->orderBy('updated_at', 'desc')->get();
+        } else {
+            $results = $query->where('created_by', auth()->user()->id)
+                             ->orderBy('updated_at', 'desc')->get();
+        }
+    
+        // Measure execution time
         $endTime = microtime(true);
         $queryTime = round(($endTime - $startTime), 2); // Keep it in seconds
-
+    
         return response()->json([
             'data' => $results,
-            'count' => $resultsCount,
             'query_time_sec' => $queryTime, // Include query time in response in seconds
         ]);
     }
+     
 
 
     public function profileUpdate(Request $request){
