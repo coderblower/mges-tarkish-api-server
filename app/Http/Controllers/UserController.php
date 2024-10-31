@@ -539,6 +539,48 @@ Web link: MGES.GLOBAL';
     }
 
 
+    public function searchCandidate_test(Request $request)
+    {
+        // Start measuring time
+        $startTime = microtime(true);
+
+
+        $participants = User::query()
+        ->when($request->filled('phone'), function ($query) use ($request) {
+            $query->where( function ($q) use ($request) {
+                // first name or last name or email or phone
+                $q->where('phone', 'like', "%{$request->phone}%")
+                          ->orWhere('email', 'like', "%{$request->phone}%")
+                          ->orWhereHas('candidate', function ($query) use ($request) {
+                              $query->where('passport', 'like', "%{$request->phone}%");
+                          });
+
+            });
+        })
+        ->with(['candidate', 'createdBy'])
+
+        ->where('role_id', 5)
+
+        ->paginate(20);
+
+
+
+
+        // Apply additional role-specific filters
+
+
+        // End measuring time
+        $endTime = microtime(true);
+        $queryTime = round(($endTime - $startTime), 2); // Keep it in seconds
+
+        return response()->json([
+            'data' => $participants,
+
+            'query_time_sec' => $queryTime, // Include query time in response in seconds
+        ]);
+    }
+
+
     public function profileUpdate(Request $request){
         $req = Validator::make($request->all(), [
             'id' => 'required',
