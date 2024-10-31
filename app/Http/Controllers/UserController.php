@@ -482,6 +482,7 @@ Web link: MGES.GLOBAL';
             ->when($request->has('creator'), function ($query) use ($request) {
                 $query->where('created_by', $request->creator);
             })
+            
             ->when($request->filled('country'), function ($query) use ($request) {
                 $query->whereHas('candidate', function ($query) use ($request) {
                     $query->where('country', $request->country);
@@ -505,7 +506,7 @@ Web link: MGES.GLOBAL';
                 })
                 ->paginate(10);
 
-            $resultsCount = (clone $baseQuery)->count();
+            // $resultsCount = (clone $baseQuery)->count();
         } elseif (auth()->user()->role_id == 2) {
             $results = (clone $baseQuery)
                 ->whereHas('candidate', function ($query) {
