@@ -478,7 +478,7 @@ Web link: MGES.GLOBAL';
         $startTime = microtime(true);
 
         // Base query
-        $query = User::with(['candidate:id,user_id,passport,country,qr_code', 'createdBy:id,name'])
+        $query = User::with(['candidate:id,user_id,passport,country,qr_code,photo', 'createdBy:id,name'])
             ->where('role_id', 5);
 
         // Check for 'creator' parameter
