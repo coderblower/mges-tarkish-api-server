@@ -476,16 +476,16 @@ Web link: MGES.GLOBAL';
     {
         // Start measuring time
         $startTime = microtime(true);
-    
+
         // Base query
-        $query = User::with(['candidate:id,user_id,passport,country', 'createdBy:id,name'])
+        $query = User::with(['candidate:id,user_id,passport,country,qr_code', 'createdBy:id,name'])
             ->where('role_id', 5);
-    
+
         // Check for 'creator' parameter
         if ($request->filled('creator')) {
             $query->where('created_by', $request->creator);
         }
-    
+
         // Check for 'country' parameter using whereExists
         if ($request->filled('country')) {
             $query->whereExists(function ($q) use ($request) {
@@ -495,7 +495,7 @@ Web link: MGES.GLOBAL';
                   ->where('country', $request->country);
             });
         }
-    
+
         // Check for 'phone' parameter
         if ($request->filled('phone')) {
             $phoneSearch = "%{$request->phone}%";
@@ -510,7 +510,7 @@ Web link: MGES.GLOBAL';
                   });
             });
         }
-    
+
         // Role-specific conditions
         if (auth()->user()->role_id == 1 || auth()->user()->role_id == 3) {
             $results = $query->orderBy('updated_at', 'desc')->paginate(10);
@@ -520,17 +520,17 @@ Web link: MGES.GLOBAL';
             $results = $query->where('created_by', auth()->user()->id)
                              ->orderBy('updated_at', 'desc')->get();
         }
-    
+
         // Measure execution time
         $endTime = microtime(true);
         $queryTime = round(($endTime - $startTime), 2); // Keep it in seconds
-    
+
         return response()->json([
             'data' => $results,
             'query_time_sec' => $queryTime, // Include query time in response in seconds
         ]);
     }
-     
+
 
 
     public function profileUpdate(Request $request){
