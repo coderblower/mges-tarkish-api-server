@@ -376,25 +376,22 @@ class PartnerController extends Controller
     }
 
 
-    public function get_partners_only_name(Request $request){
-      
+    public function get_partners_name(Request $request){
+
         $data = User::where('role_id', $request->role_id)
-        ->with('createdBy:id,email')
-        ->with('role:id')
-        ->select('users.name',  'users.created_by', 'users.role_id')
+        // ->with('createdBy:id,email,name') // Only fetch the `id` and `email` fields for `createdBy`>with('role:id') // Only fetch the `id` field for `role`
+        ->select('users.name', 'users.created_by', 'users.role_id') // Select relevant fields from `users`
         ->get();
-    
-                
-               
-           
+
             return response()->json([
                 'success' => true,
                 'message' => 'Successful!',
                 'data' => $data,
-               
+
             ]);
-       
+
     }
+
 
     public function getMsg($request, $data){
         if ($data->role_id == 5) {

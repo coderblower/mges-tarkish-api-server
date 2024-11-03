@@ -76,7 +76,7 @@ Route::group(['name'=>'Partner','middleware' => 'api','prefix' => 'partner'], fu
     Route::post('/destroy', [PartnerController::class, 'destroy']);
     Route::post('/all', [PartnerController::class, 'all']);
     Route::post('/get_partners', [PartnerController::class, 'getPartners']);
-    Route::post('/get_partners_only_name', [PartnerController::class, 'get_partners_only_name']);
+    Route::post('/get_partners_name', [PartnerController::class, 'get_partners_name']);
 });
 Route::group(['name'=>'Agents','middleware' => 'api','prefix' => 'agent'], function () {
     Route::post('/percentages', [PartnerController::class, 'percentages']);
