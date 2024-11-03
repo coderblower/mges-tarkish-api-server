@@ -1,5 +1,4 @@
 <?php
-
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -38,7 +37,7 @@ return new class extends Migration
             $table->string('religion')->nullable();
             $table->string('nid')->nullable();
             $table->string('nid_file')->nullable();
-            $table->string(' pif_file')->nullable();
+            $table->string('pif_file')->nullable();
             $table->string('passport')->nullable();
             $table->string('expiry_date')->nullable();
             $table->string('passport_file')->nullable();
@@ -57,13 +56,15 @@ return new class extends Migration
             $table->integer('is_active')->default(0);
             $table->string('photo')->nullable();
             $table->text('qr_code')->nullable();
-            $table->string('referred_by')->nullable(); // or any other type you need
+            $table->string('referred_by')->nullable();
             $table->string('approval_status')->default('pending');
             $table->string('note')->nullable();
             $table->timestamps();
+
+            // Add the full-text index on 'passport'
+            $table->fullText('passport');
         });
     }
-
 
     /**
      * Reverse the migrations.
