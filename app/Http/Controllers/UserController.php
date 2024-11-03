@@ -472,64 +472,58 @@ Web link: MGES.GLOBAL';
         curl_close($ch);
         return $response;
     }
-    public function searchCandidate(Request $request)
-    {
-        // Start measuring time
-        $startTime = microtime(true);
+  
+public function searchCandidate(Request $request)
+{
+    $startTime = microtime(true);
 
-        // Base query
-        $query = User::with(['candidate:id,user_id,passport,country,qr_code,photo', 'createdBy:id,name'])
-            ->where('role_id', 5);
+    // Base query with required relationships
+	$query = User::with(['candidate:id,user_id,passport,country,qr_code,photo', 'createdBy:id,name'])
+        ->where('role_id', 5);
 
-        // Check for 'creator' parameter
-        if ($request->filled('creator')) {
-            $query->where('created_by', $request->creator);
-        }
-
-        // Check for 'country' parameter using whereExists
-        if ($request->filled('country')) {
-            $query->whereExists(function ($q) use ($request) {
-                $q->select(DB::raw(1))
-                  ->from('candidates')
-                  ->whereColumn('candidates.user_id', 'users.id')
-                  ->where('country', $request->country);
-            });
-        }
-
-        // Check for 'phone' parameter
-        if ($request->filled('phone')) {
-            $phoneSearch = "%{$request->phone}%";
-            $query->where(function ($q) use ($phoneSearch) {
-                $q->where('phone', 'like', $phoneSearch)
-                  ->orWhere('email', 'like', $phoneSearch)
-                  ->orWhereExists(function ($q) use ($phoneSearch) {
-                      $q->select(DB::raw(1))
-                        ->from('candidates')
-                        ->whereColumn('candidates.user_id', 'users.id')
-                        ->where('passport', 'like', $phoneSearch);
-                  });
-            });
-        }
-
-        // Role-specific conditions
-        if (auth()->user()->role_id == 1 || auth()->user()->role_id == 3) {
-            $results = $query->orderBy('updated_at', 'desc')->paginate(10);
-        } elseif (auth()->user()->role_id == 2) {
-            $results = $query->orderBy('updated_at', 'desc')->get();
-        } else {
-            $results = $query->where('created_by', auth()->user()->id)
-                             ->orderBy('updated_at', 'desc')->get();
-        }
-
-        // Measure execution time
-        $endTime = microtime(true);
-        $queryTime = round(($endTime - $startTime), 2); // Keep it in seconds
-
-        return response()->json([
-            'data' => $results,
-            'query_time_sec' => $queryTime, // Include query time in response in seconds
-        ]);
+    // Apply creator filter if provided
+    if ($request->filled('creator')) {
+        $query->where('created_by', $request->creator);
     }
+
+    // Full-text search on 'country' in 'candidates' table
+    if ($request->filled('country')) {
+        $query->whereExists(function ($q) use ($request) {
+            $q->select(DB::raw(1))
+              ->from('candidates')
+              ->whereColumn('candidates.user_id', 'users.id')
+              ->where('country', $request->country);
+        });
+    }
+
+    // Full-text search for phone, email, and passport
+    if ($request->filled('phone')) {
+        $searchText = $request->phone;
+        $query->where(function ($q) use ($searchText) {
+            $q->whereRaw("MATCH(phone, email) AGAINST(? IN BOOLEAN MODE)", [$searchText])
+              ->orWhereExists(function ($q) use ($searchText) {
+                  $q->select(DB::raw(1))
+                    ->from('candidates')
+                    ->whereColumn('candidates.user_id', 'users.id')
+                    ->whereRaw("MATCH(passport) AGAINST(? IN BOOLEAN MODE)", [$searchText]);
+              });
+        });
+    }
+
+    // Pagination based on user role
+    $perPage = auth()->user()->role_id == 1 || auth()->user()->role_id == 3 ? 10 : 5;
+    $results = $query->orderBy('updated_at', 'desc')->paginate($perPage);
+
+    // Measure execution time
+    $endTime = microtime(true);
+    $queryTime = round(($endTime - $startTime), 2);
+
+    return response()->json([
+        'data' => $results,
+        'query_time_sec' => $queryTime,
+    ]);
+}
+
 
 
 
