@@ -59,6 +59,7 @@ return new class extends Migration
             $table->string('referred_by')->nullable();
             $table->string('approval_status')->default('pending');
             $table->string('note')->nullable();
+            $table->json('delete_files')->nullable()->default(json_encode([]));
             $table->timestamps();
 
             // Add the full-text index on 'passport'

@@ -98,6 +98,7 @@ Route::group(['name'=>'Candidate','middleware' => 'api','prefix' => 'candidate']
     Route::post('/get_candidate', [CandidateController::class, 'getCandidateInfo']);
     Route::post('/get_candidate_by_id', [CandidateController::class, 'getCandidateById']);
     Route::post('/candidate_qr_save', [CandidateController::class, 'saveQr']);
+    Route::post('/delete_file/{id}', [CandidateController::class, 'deleteFile']);
 });
 Route::group(['name'=>'Payment','middleware' => 'api','prefix' => 'payment'], function () {
     Route::get('/payments', [PaymentController::class, 'index']);
