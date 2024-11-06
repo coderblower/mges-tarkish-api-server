@@ -465,6 +465,7 @@ Web link: MGES.GLOBAL';
 
 
 
+
     public function searchCandidate(Request $request)
     {
        $startTime = microtime(true);
