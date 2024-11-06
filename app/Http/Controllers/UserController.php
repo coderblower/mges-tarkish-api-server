@@ -8,7 +8,9 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Response;
 
 
 class UserController extends Controller
@@ -21,12 +23,14 @@ class UserController extends Controller
     public function create(Request $request)
     {
 
+
         // Validation rules
         $validator = Validator::make($request->all(), [
             'name' => 'required|string',
             'email' => 'required|string|unique:users',
             'phone' => 'required|string|min:11|unique:users',
-            'password' => 'required|string|min:6',
+
+            'passport' => 'required|unique:candidates|regex:/^[A-Za-z].*/',
         ]);
 
         // Return validation error response if validation fails
@@ -50,22 +54,7 @@ class UserController extends Controller
             $user->save();
 
             // Additional validation for role 5 (candidate creation)
-            if ($user->role_id == 5) {
-                $candidateValidator = Validator::make($request->all(), [
-                    'passport' => 'required|unique:candidates',
-                ]);
 
-                if ($candidateValidator->fails()) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => $candidateValidator->errors(),
-                        'error' => $candidateValidator->errors(),
-                    ]);
-                }
-
-                // Create candidate
-                $candidate = $this->createCandidate($request, $user->id);
-            }
 
             // Update user's created_by and send SMS
             $user->created_by = auth()->user() ? auth()->user()->id : $user->id;
@@ -93,6 +82,8 @@ class UserController extends Controller
     // Extracted method to handle candidate creation
     private function createCandidate(Request $request, $userId)
     {
+
+
         try {
             $candidate = new Candidate();
             $candidate->user_id = $userId;
@@ -471,114 +462,125 @@ Web link: MGES.GLOBAL';
         curl_close($ch);
         return $response;
     }
+
+
+
+
     public function searchCandidate(Request $request)
     {
-        // Start measuring time
-        $startTime = microtime(true);
+       $startTime = microtime(true);
 
-        // Define base query with common relationships and filters
-        $baseQuery = User::with(['candidate', 'createdBy'])
-            ->where('role_id', 5)
-            ->when($request->has('creator'), function ($query) use ($request) {
-                $query->where('created_by', $request->creator);
-            })
-            ->when($request->filled('country'), function ($query) use ($request) {
-                $query->whereHas('candidate', function ($query) use ($request) {
-                    $query->where('country', $request->country);
-                });
-            })
-            ->when($request->filled('phone'), function ($query) use ($request) {
-                $query->where(function ($query) use ($request) {
-                    $query->where('phone', 'like', "%{$request->phone}%")
-                          ->orWhere('email', 'like', "%{$request->phone}%")
-                          ->orWhereHas('candidate', function ($query) use ($request) {
-                              $query->where('passport', 'like', "%{$request->phone}%");
-                          });
-                });
-            });
 
-        // Apply additional role-specific filters
-        if (auth()->user()->role_id == 1 || auth()->user()->role_id == 3) {
-            $results = (clone $baseQuery)
-                ->whereHas('candidate', function ($query) {
-                    $query->orderBy('updated_at', 'desc');
-                })
-                ->paginate(10);
 
-            $resultsCount = (clone $baseQuery)->count();
-        } elseif (auth()->user()->role_id == 2) {
-            $results = (clone $baseQuery)
-                ->whereHas('candidate', function ($query) {
-                    $query->orderBy('updated_at', 'desc');
-                })
-                ->get();
 
-            $resultsCount = (clone $baseQuery)->count();
-        } else {
-            $results = (clone $baseQuery)
-                ->where('created_by', auth()->user()->id)
-                ->whereHas('candidate', function ($query) {
-                    $query->orderBy('updated_at', 'desc');
-                })
-                ->get();
+        // Base query with required relationships and specific fields
+        $query = User::select('id', 'created_by')
+            ->with([
+                'candidate:id,user_id,passport,expiry_date,training_status,medical_status,lastName,firstName,current_status,approval_status,qr_code,photo',
+                'createdBy:id,name',
+            ])
+            ->where('role_id', 5);
 
-            $resultsCount = (clone $baseQuery)
-                ->where('created_by', auth()->user()->id)
-                ->count();
+        // Apply creator filter if provided
+        if ($request->filled('creator')) {
+            $query->where('created_by', $request->creator);
         }
 
-        // End measuring time
+        // Full-text search on 'country' in 'candidates' table
+        if ($request->filled('country')) {
+            $query->whereExists(function ($q) use ($request) {
+                $q->select(DB::raw(1))
+                  ->from('candidates')
+                  ->whereColumn('candidates.user_id', 'users.id')
+                  ->where('country', $request->country);
+            });
+        }
+
+        // Full-text search for phone, email, and passport
+        if ($request->filled('phone')) {
+            $searchText = $request->phone;
+            $query->where(function ($q) use ($searchText) {
+                $q->whereRaw("MATCH(phone, email) AGAINST(? IN BOOLEAN MODE)", [$searchText])
+                  ->orWhereExists(function ($q) use ($searchText) {
+                      $q->select(DB::raw(1))
+                        ->from('candidates')
+                        ->whereColumn('candidates.user_id', 'users.id')
+                        ->whereRaw("MATCH(passport) AGAINST(? IN BOOLEAN MODE)", [$searchText]);
+                  });
+            });
+        }
+
+        // Filter candidates created by the specified agent
+        if ($request->filled('agent')) {
+            $query->whereHas('createdBy', function ($q) use ($request) {
+                $q->where('name', $request->agent);
+            });
+        }
+
+
+
+        // Export all data as CSV if requested
+        if ($request->filled('export_all') && $request->export_all == true) {
+            $filename = "candidates_export_" . now()->format('Y_m_d_H_i_s') . ".csv";
+
+            $serialNumber = 1;
+
+            // Create a StreamedResponse to write CSV data
+            $response = Response::stream(function () use ($query, $serialNumber) {
+                ob_end_clean(); // Clear any previous output
+                $handle = fopen('php://output', 'w');
+
+                // Write CSV header
+                fputcsv($handle, [
+                    'SL', 'First Name', 'Last Name', 'Passport', 'Created By',
+                    'Training Status', 'Medical Status', 'Passport Expiry Date'
+                ]);
+
+                // Fetch data and write each row to the CSV
+                $query->orderBy('updated_at', 'desc')->chunk(100, function ($users) use ($handle, $serialNumber) {
+
+                    foreach ($users as $user) {
+
+                        Log::info("message", ['user'=>$user]);
+
+                        fputcsv($handle, [
+                            $serialNumber++,
+                            $user->candidate?->firstName,
+                            $user->candidate?->lastName,
+                            $user->candidate?->passport ?? null,
+                            $user->createdBy?->name ?? null,
+                            $user->candidate?->training_status ?? null,
+                            $user->candidate?->medical_status ?? null,
+                            $user->candidate?->expiry_date ?? null,
+                        ]);
+                    }
+                });
+
+                fclose($handle);
+            }, 200, [
+                "Content-Type" => "text/csv",
+                "Content-Disposition" => "attachment; filename=$filename",
+            ]);
+
+            return $response;
+        }
+
+
+        // If not exporting, continue with pagination and JSON response
+        $perPage = auth()->user()->role_id == 1 || auth()->user()->role_id == 3 ? 10 : 5;
+        $results = $query->orderBy('updated_at', 'desc')->paginate($perPage);
+
+        // Measure execution time
         $endTime = microtime(true);
-        $queryTime = round(($endTime - $startTime), 2); // Keep it in seconds
+        $queryTime = round(($endTime - $startTime), 2);
 
         return response()->json([
             'data' => $results,
-            'count' => $resultsCount,
-            'query_time_sec' => $queryTime, // Include query time in response in seconds
+            'query_time_sec' => $queryTime,
         ]);
     }
 
 
-    public function searchCandidate_test(Request $request)
-    {
-        // Start measuring time
-        $startTime = microtime(true);
-
-
-        $participants = User::query()
-        ->when($request->filled('phone'), function ($query) use ($request) {
-            $query->where( function ($q) use ($request) {
-                // first name or last name or email or phone
-                $q->where('phone', 'like', "%{$request->phone}%")
-                          ->orWhere('email', 'like', "%{$request->phone}%")
-                          ->orWhereHas('candidate', function ($query) use ($request) {
-                              $query->where('passport', 'like', "%{$request->phone}%");
-                          });
-
-            });
-        })
-        ->with(['candidate', 'createdBy'])
-
-        ->where('role_id', 5)
-
-        ->paginate(20);
-
-
-
-
-        // Apply additional role-specific filters
-
-
-        // End measuring time
-        $endTime = microtime(true);
-        $queryTime = round(($endTime - $startTime), 2); // Keep it in seconds
-
-        return response()->json([
-            'data' => $participants,
-
-            'query_time_sec' => $queryTime, // Include query time in response in seconds
-        ]);
-    }
 
 
     public function profileUpdate(Request $request){
