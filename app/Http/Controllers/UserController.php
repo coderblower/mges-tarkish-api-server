@@ -582,7 +582,6 @@ Web link: MGES.GLOBAL';
 
 
 
-
     public function profileUpdate(Request $request){
         $req = Validator::make($request->all(), [
             'id' => 'required',
