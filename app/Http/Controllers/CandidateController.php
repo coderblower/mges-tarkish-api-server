@@ -700,4 +700,45 @@ class CandidateController extends Controller
             ]);
         }
     }
+
+    public function deleteFile(Request $request, $id)
+    {
+
+
+        // Validate incoming request
+        $request->validate([
+            'file' => 'required|string', // File name must be a non-empty string
+        ]);
+
+        // Find the user instance by ID
+        $user = User::find($id);
+
+        if (!$user) {
+            return response()->json(['message' => 'User not found.'], 404);
+        }
+
+        // Get the incoming file name
+        $columnName = $request->input('file');
+
+        // Check if the file name exists in the user's candidates
+        $candidate = $user->candidate()->whereNotNull($columnName)->first();
+
+        // Check if the candidate exists
+        if (!$candidate) {
+            return response()->json(['message' => "No candidate with a non-null value in the column '$columnName'."], 404);
+        }
+
+
+        // Prepare the delete file data
+        $deleteFiles = $candidate->delete_files ?? []; // Get current delete files
+
+        // Store the current date with the file name
+        $deleteFiles[$columnName] = now(); // or use a specific date
+
+        // Update the delete_files column for the candidate
+        $candidate->delete_files = $deleteFiles;
+        $candidate->save();
+
+        return response()->json(['message' => 'File deletion recorded successfully.']);
+    }
 }

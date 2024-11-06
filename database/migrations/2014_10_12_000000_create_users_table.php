@@ -1,5 +1,4 @@
 <?php
-
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -23,6 +22,9 @@ return new class extends Migration
             $table->rememberToken();
             $table->timestamps();
             $table->softDeletes(); // This adds the 'deleted_at' column
+
+            // Add the full-text index on 'phone' and 'email'
+            $table->fullText(['phone', 'email']);
         });
     }
 
