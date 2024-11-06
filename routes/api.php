@@ -63,6 +63,7 @@ Route::group(['name'=>'User','middleware' => 'api','prefix' => 'user'], function
     Route::post('/count', [UserController::class, 'count']);
     Route::post('/group_by', [UserController::class, 'groupBy']);
     Route::post('/search_candidate', [UserController::class, 'searchCandidate']);
+    Route::post('/search_candidate_two', [UserController::class, 'searchCandidate_test']);
 });
 Route::group(['name'=>'Role','middleware' => 'api','prefix' => 'role'], function () {
     Route::post('/all', [RoleController::class, 'all']);

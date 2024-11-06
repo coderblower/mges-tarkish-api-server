@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
+use Illuminate\Support\Facades\DB;
 
 class UserController extends Controller
 {
@@ -480,110 +481,101 @@ Web link: MGES.GLOBAL';
         curl_close($ch);
         return $response;
     }
-    public function searchCandidate(Request $request){
-        if (auth()->user()->role_id== 1 || auth()->user()->role_id== 3){
-            $results = User::with('candidate')
-                ->when($request->has('creator'), function($query) use ($request) {
-                    $query->where('created_by', $request->creator);})
-                ->when($request->country != '', function($query) use ($request) {
-                    $query->WhereHas('candidate', function ($query) use ($request) {
-                        $query->where('country',$request->country);});
-                })
-                ->where('role_id', 5)
-                ->when($request->phone != '', function ($query) use ($request) {
-                $query->where('phone', 'like', "%$request->phone%")
-                    ->orWhere('email', 'like', "%$request->phone%")
-                    ->orWhereHas('candidate', function ($query) use ($request) {
-                        $query->where('passport', 'like', "%$request->phone%");});
-            })
 
-                ->WhereHas('candidate', function ($query) use ($request) {
-                    $query->orderBy('updated_at', 'desc');})
-                ->with('createdBy')
 
-                ->paginate(10);
-            $results1 = User::with('candidate')
-                ->when($request->has('creator'), function($query) use ($request) {
-                    $query->where('created_by', $request->creator);})
-                ->where('role_id', 5)
-                ->when($request->phone != '', function ($query) use ($request) {
-                $query->where('phone', 'like', "%$request->phone%")
-                    ->orWhere('email', 'like', "%$request->phone%")
-                    ->orWhereHas('candidate', function ($query) use ($request) {
-                        $query->where('passport', 'like', "%$request->phone%");});
-            })
-                ->with('createdBy')
-                ->orderBy('id', 'desc')
-                ->count();
-        }
-        else if (auth()->user()->role_id== 2){
-            $results = User::with('candidate')
-                ->when($request->has('creator'), function($query) use ($request) {
-                    $query->where('created_by', $request->creator);})
-                ->when($request->country != '', function($query) use ($request) {
-                    $query->WhereHas('candidate', function ($query) use ($request) {
-                        $query->where('country',$request->country);});
-                })
-                ->where('role_id', 5)
-                ->when($request->phone != '', function ($query) use ($request) {
-                $query->where('phone', 'like', "%$request->phone%")
-                    ->orWhere('email', 'like', "%$request->phone%")
-                    ->orWhereHas('candidate', function ($query) use ($request) {
-                        $query->where('passport', 'like', "%$request->phone%");});
-            })
-//                ->WhereHas('candidate', function ($query) use ($request) {
-//                    $query->where('approval_status','!=','pending')->orderBy('updated_at', 'desc');})
-                ->with('createdBy')
-                ->WhereHas('candidate', function ($query) use ($request) {
-                    $query->orderBy('updated_at', 'desc');})
-                ->get();
-            $results1 = User::with('candidate')
-                ->when($request->has('creator'), function($query) use ($request) {
-                    $query->where('created_by', $request->creator);})
-                ->where('role_id', 5)
-                ->when($request->phone != '', function ($query) use ($request) {
-                $query->where('phone', 'like', "%$request->phone%")
-                    ->orWhere('email', 'like', "%$request->phone%")
-                    ->orWhereHas('candidate', function ($query) use ($request) {
-                        $query->where('passport', 'like', "%$request->phone%");});
-            })
-                ->with('createdBy')
-                ->orderBy('id', 'desc')
-                ->count();
-        }else{
-            $results = User::with('candidate')->where('created_by', auth()->user()->id)->where('role_id', 5)
-                ->when($request->country != '', function($query) use ($request) {
-                    $query->WhereHas('candidate', function ($query) use ($request) {
-                        $query->where('country',$request->country);});
-                })
-                ->when($request->phone != '', function ($query) use ($request) {
-                $query->where('phone', 'like', "%$request->phone%")
-                    ->orWhere('email', 'like', "%$request->phone%")
-                    ->orWhereHas('candidate', function ($query) use ($request) {
-                        $query->where('passport', 'like', "%$request->phone%");});
-            })
-//                ->WhereHas('candidate', function ($query) use ($request) {
-//                    $query->where('approval_status','!=','pending')->orderBy('updated_at', 'desc');})
-                ->WhereHas('candidate', function ($query) use ($request) {
-                    $query->orderBy('updated_at', 'desc');})
-                ->get();
-            $results1 = User::with('candidate')->where('created_by', auth()->user()->id)->where('role_id', 5)
-                ->when($request->phone != '', function ($query) use ($request) {
-                $query->where('phone', 'like', "%$request->phone%")
-                    ->orWhere('email', 'like', "%$request->phone%")
-                    ->orWhereHas('candidate', function ($query) use ($request) {
-                        $query->where('passport', 'like', "%$request->phone%");});
-            })
-                ->orderBy('id', 'desc')
-                ->count();
-        }
+public function searchCandidate(Request $request)
+{
+    $startTime = microtime(true);
 
+    // Base query with required relationships
+	$query = User::with(['candidate:id,user_id,passport,country,qr_code,photo', 'createdBy:id,name'])
+        ->where('role_id', 5);
+
+    // Apply creator filter if provided
+    if ($request->filled('creator')) {
+        $query->where('created_by', $request->creator);
+    }
+
+    // Full-text search on 'country' in 'candidates' table
+    if ($request->filled('country')) {
+        $query->whereExists(function ($q) use ($request) {
+            $q->select(DB::raw(1))
+              ->from('candidates')
+              ->whereColumn('candidates.user_id', 'users.id')
+              ->where('country', $request->country);
+        });
+    }
+
+    // Full-text search for phone, email, and passport
+    if ($request->filled('phone')) {
+        $searchText = $request->phone;
+        $query->where(function ($q) use ($searchText) {
+            $q->whereRaw("MATCH(phone, email) AGAINST(? IN BOOLEAN MODE)", [$searchText])
+              ->orWhereExists(function ($q) use ($searchText) {
+                  $q->select(DB::raw(1))
+                    ->from('candidates')
+                    ->whereColumn('candidates.user_id', 'users.id')
+                    ->whereRaw("MATCH(passport) AGAINST(? IN BOOLEAN MODE)", [$searchText]);
+              });
+        });
+    }
+
+    // Pagination based on user role
+    $perPage = auth()->user()->role_id == 1 || auth()->user()->role_id == 3 ? 10 : 5;
+    $results = $query->orderBy('updated_at', 'desc')->paginate($perPage);
+
+    // Measure execution time
+    $endTime = microtime(true);
+    $queryTime = round(($endTime - $startTime), 2);
+
+    return response()->json([
+        'data' => $results,
+        'query_time_sec' => $queryTime,
+    ]);
+}
+
+     public function searchCandidate_test(Request $request)
+    {
+        // Start measuring time
+        $startTime = microtime(true);
+
+
+        $participants = User::query()
+        ->when($request->filled('phone'), function ($query) use ($request) {
+            $query->where( function ($q) use ($request) {
+                // first name or last name or email or phone
+                $q->where('phone', 'like', "%{$request->phone}%")
+                          ->orWhere('email', 'like', "%{$request->phone}%")
+                          ->orWhereHas('candidate', function ($query) use ($request) {
+                              $query->where('passport', 'like', "%{$request->phone}%");
+                          });
+
+            });
+        })
+        ->with(['candidate', 'createdBy'])
+
+        ->where('role_id', 5)
+
+        ->paginate(20);
+
+
+
+
+        // Apply additional role-specific filters
+
+
+        // End measuring time
+        $endTime = microtime(true);
+        $queryTime = round(($endTime - $startTime), 2); // Keep it in seconds
 
         return response()->json([
-            'data'=> $results,
-            'count'=> $results1,
+            'data' => $results,
+
+            'query_time_sec' => $queryTime, // Include query time in response in seconds
         ]);
     }
+
+   
     public function profileUpdate(Request $request){
         $req = Validator::make($request->all(), [
             'id' => 'required',
