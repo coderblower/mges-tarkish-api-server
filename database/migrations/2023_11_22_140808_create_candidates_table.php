@@ -60,6 +60,7 @@ return new class extends Migration
             $table->string('approval_status')->default('pending');
             $table->string('note')->nullable();
             $table->json('delete_files')->nullable()->default(json_encode([]));
+            $table->enum('current_status', ['Medically Fit', 'Training Passed','Medically Unfit', 'Training Failed'])->nullable();
             $table->timestamps();
 
             // Add the full-text index on 'passport'
