@@ -77,6 +77,7 @@ Route::group(['name'=>'Partner','middleware' => 'api','prefix' => 'partner'], fu
     Route::post('/destroy', [PartnerController::class, 'destroy']);
     Route::post('/all', [PartnerController::class, 'all']);
     Route::post('/get_partners', [PartnerController::class, 'getPartners']);
+    Route::post('/get_partners_name', [PartnerController::class, 'get_partners_name']);
 });
 Route::group(['name'=>'Agents','middleware' => 'api','prefix' => 'agent'], function () {
     Route::post('/percentages', [PartnerController::class, 'percentages']);
@@ -98,6 +99,7 @@ Route::group(['name'=>'Candidate','middleware' => 'api','prefix' => 'candidate']
     Route::post('/get_candidate', [CandidateController::class, 'getCandidateInfo']);
     Route::post('/get_candidate_by_id', [CandidateController::class, 'getCandidateById']);
     Route::post('/candidate_qr_save', [CandidateController::class, 'saveQr']);
+    Route::post('/delete_file/{id}', [CandidateController::class, 'deleteFile']);
 });
 Route::group(['name'=>'Payment','middleware' => 'api','prefix' => 'payment'], function () {
     Route::get('/payments', [PaymentController::class, 'index']);
