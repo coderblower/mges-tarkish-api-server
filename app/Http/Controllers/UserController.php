@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Response;
 
 
+
 class UserController extends Controller
 {
     public function __construct()
@@ -579,6 +580,7 @@ Web link: MGES.GLOBAL';
             'query_time_sec' => $queryTime,
         ]);
     }
+
 
 
 
