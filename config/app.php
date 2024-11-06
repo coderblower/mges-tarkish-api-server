@@ -186,7 +186,7 @@ return [
         // 'Example' => App\Facades\Example::class,
         'QrCode' => SimpleSoftwareIO\QrCode\Facades\QrCode::class,
         'Log' => Illuminate\Support\Facades\Log::class,
-        'Hash' => Illuminate\Support\Facades\Hash::class;
+        'Hash' => Illuminate\Support\Facades\Hash::class,
     ])->toArray(),
 
 ];
