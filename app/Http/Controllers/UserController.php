@@ -488,14 +488,12 @@ Web link: MGES.GLOBAL';
         }
 
         // Full-text search on 'country' in 'candidates' table
-        if ($request->filled('country')) {
-            $query->whereExists(function ($q) use ($request) {
-                $q->select(DB::raw(1))
-                  ->from('candidates')
-                  ->whereColumn('candidates.user_id', 'users.id')
-                  ->where('country', $request->country);
-            });
-        }
+        // Full-text search on 'country' in 'candidates' table
+            if ($request->filled('country')) {
+                $query->join('candidates', 'candidates.user_id', '=', 'users.id')
+                    ->where('candidates.country', $request->country);
+            }
+
 
         // Full-text search for phone, email, and passport
         if ($request->filled('phone')) {
@@ -512,11 +510,11 @@ Web link: MGES.GLOBAL';
         }
 
         // Filter candidates created by the specified agent
+    // Filter candidates created by the specified agent
         if ($request->filled('agent')) {
-            $query->whereHas('createdBy', function ($q) use ($request) {
-                $q->where('name', $request->agent);
-            });
+            $query->where('users.created_by', $request->agent);
         }
+
 
 
 
