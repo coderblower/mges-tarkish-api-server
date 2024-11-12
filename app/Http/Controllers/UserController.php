@@ -510,7 +510,7 @@ Web link: MGES.GLOBAL';
         }
 
         // Filter candidates created by the specified agent
-    // Filter candidates created by the specified agent
+        // Filter candidates created by the specified agent
         if ($request->filled('agent')) {
             $query->where('users.created_by', $request->agent);
         }
