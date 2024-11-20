@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Candidate extends Model
 {
+
     protected $casts = [
         'delete_files' => 'array',
     ];
