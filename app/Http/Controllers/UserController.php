@@ -53,8 +53,24 @@ class UserController extends Controller
             $user->password = bcrypt($request->password);
             $user->save();
 
-            // Additional validation for role 5 (candidate creation)
 
+             // Additional validation for role 5 (candidate creation)
+             if ($user->role_id == 5) {
+                $candidateValidator = Validator::make($request->all(), [
+                    'passport' => 'required|unique:candidates',
+                ]);
+
+                if ($candidateValidator->fails()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => $candidateValidator->errors(),
+                        'error' => $candidateValidator->errors(),
+                    ]);
+                }
+
+                // Create candidate
+                $candidate = $this->createCandidate($request, $user->id);
+            }
 
             // Update user's created_by and send SMS
             $user->created_by = auth()->user() ? auth()->user()->id : $user->id;
