@@ -87,6 +87,12 @@ class UserController extends Controller
             ]);
 
         } catch (\Exception $e) {
+            if (isset($user)) {
+                $user->delete();
+            }
+            if (isset($candidate)) {
+                $candidate->delete();
+            }
             return response()->json([
                 'success' => false,
                 'message' => 'Error occurred during user creation!',
