@@ -8,6 +8,14 @@ use Illuminate\Database\Eloquent\Model;
 class Candidate extends Model
 {
 
+
+    protected $fillable = [
+        'passport_all_page',
+        'cv',
+        'resume',
+        'birth_certificate'
+    ];
+
     protected $casts = [
         'delete_files' => 'array',
     ];

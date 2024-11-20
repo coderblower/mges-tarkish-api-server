@@ -127,6 +127,10 @@ class UserController extends Controller
             $candidate->experience_file = $request->experience_file ? $this->getExpUrl($request) : null;
             $candidate->academic_file = $request->academic_file ? $this->getAcademicUrl($request) : null;
             $candidate->training_file = $request->training_file ? $this->getTrainingUrl($request) : null;
+            $candidate->passport_all_page = $request->passport_all_page ? $this->getPassportAllPageUrl($request) : null;
+            $candidate->cv = $request->cv ? $this->getCvUrl($request) : null;
+            $candidate->resume = $request->resume ? $this->getResumeUrl($request) : null;
+            $candidate->birth_certificate = $request->birth_certificate ? $this->getBirthCertificate($request) : null;
             $candidate->qr_code = $this->getQRUrl($userId);
 
             // If the user is an admin, automatically approve
@@ -724,4 +728,45 @@ public function getVerifiedCertificateUrl($request)
         $image->move($path, $imageName);
         return $path.$imageName;
     }
+
+
+
+    public function getBirthCertificate($request)
+    {
+        $image = $request->file('birth_certificate');
+        $imageName = time() . $image->getClientOriginalName();
+        $path = 'candidate_photos/';
+        $image->move($path, $imageName);
+        return $path.$imageName;
+    }
+
+
+    public function getCvUrl($request)
+    {
+        $image = $request->file('cv');
+        $imageName = time() . $image->getClientOriginalName();
+        $path = 'candidate_photos/';
+        $image->move($path, $imageName);
+        return $path.$imageName;
+    }
+
+    public function getResumeUrl($request)
+    {
+        $image = $request->file('resume');
+        $imageName = time() . $image->getClientOriginalName();
+        $path = 'candidate_photos/';
+        $image->move($path, $imageName);
+        return $path.$imageName;
+    }
+
+    public function getPassportAllPageUrl($request)
+    {
+        $image = $request->file('passport_all_page');
+        $imageName = time() . $image->getClientOriginalName();
+        $path = 'candidate_photos/';
+        $image->move($path, $imageName);
+        return $path.$imageName;
+    }
+
+
 }
