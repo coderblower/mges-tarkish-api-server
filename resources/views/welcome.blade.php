@@ -6,5 +6,6 @@
 </head>
 <body>
 <h1>Hello, Meastrosoft</h1>
+{{phpInfo();}}
 </body>
 </html>
