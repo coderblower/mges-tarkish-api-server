@@ -154,6 +154,7 @@ class UserController extends Controller
             $candidate->resume = $request->resume ? $this->getResumeUrl($request) : null;
             $candidate->birth_certificate = $request->birth_certificate ? $this->getBirthCertificate($request) : null;
             $candidate->qr_code = $this->getQRUrl($userId);
+            $candidate->verified_certificated = $request->verified_certificated||false;
 
             // If the user is an admin, automatically approve
             if (auth()->user()->role_id == 1) {
