@@ -6,13 +6,17 @@ use App\Models\Candidate;
 use App\Models\CandidateMedicalTest;
 use App\Models\Quota;
 use App\Models\User;
-use http\Env\Response;
+
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use function League\Flysystem\move;
+
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Response;
 
 class CandidateController extends Controller
 {
@@ -347,17 +351,93 @@ class CandidateController extends Controller
     }
     public function all(Request $request){
         try {
-            if ($request->pg == ''){
-                $data = User::orderby('id', 'desc')->where('role_id', 5)
-                    ->with('candidate')
-                    ->with('partner')->with('createdBy')->with('candidate.designation')->with('role')->get();
-                $dataC = User::where('role_id', 5)->count();
-            }else{
-                $data = User::orderby('id', 'desc')->where('role_id', 5)
-                    ->with('candidate')
-                    ->with('partner')->with('createdBy')->doesntHave('report')->with('role')->paginate(10);
-                $dataC = User::where('role_id', 5)->doesntHave('report')->count();
+            $query = User::orderby('id', 'desc')
+                ->where('role_id', 5)
+                ->with('candidate')
+                ->when($request->has('approval_status'), function ($query) use ($request) {
+                    return $query->whereHas('candidate', function ($q) use ($request) {
+                        $q->where('approval_status', $request->approval_status);
+                    });
+                })
+                ->with('partner')
+                ->with('createdBy')
+                ->with('candidate.designation')
+                ->with('role');
+
+            // Apply the `doesntHave('report')` condition only if `$request->pg` is not empty
+            if ($request->pg != '') {
+                $query->doesntHave('report');
             }
+
+            // Fetch data (either paginated or all records)
+
+
+
+            if ($request->filled('agent')) {
+                $query->whereHas('createdBy', function ($q) use ($request) {
+                    $q->where('name', $request->agent);
+                });
+            }
+            if ($request->filled('country')) {
+                $query->whereExists(function ($q) use ($request) {
+                    $q->select(DB::raw(1))
+                      ->from('candidates')
+                      ->whereColumn('candidates.user_id', 'users.id')
+                      ->where('country', $request->country);
+                });
+            }
+
+            $data = $request->pg == '' ? $query->get() : $query->paginate(10);
+
+               // Export all data as CSV if requested
+        if ($request->filled('export_all') && $request->export_all == true) {
+            $filename = "candidates_export_" . now()->format('Y_m_d_H_i_s') . ".csv";
+
+            $serialNumber = 1;
+
+            // Create a StreamedResponse to write CSV data
+            $response = Response::stream(function () use ($query, $serialNumber) {
+                ob_end_clean(); // Clear any previous output
+                $handle = fopen('php://output', 'w');
+
+                // Write CSV header
+                fputcsv($handle, [
+                    'SL', 'First Name', 'Last Name', 'Passport', 'Created By',
+                    'Training Status', 'Medical Status', 'Passport Expiry Date'
+                ]);
+
+                // Fetch data and write each row to the CSV
+                $query->orderBy('updated_at', 'desc')->chunk(100, function ($users) use ($handle, $serialNumber) {
+
+                    foreach ($users as $user) {
+
+                        Log::info("message", ['user'=>$user]);
+
+                        fputcsv($handle, [
+                            $serialNumber++,
+                            $user->candidate?->firstName,
+                            $user->candidate?->lastName,
+                            $user->candidate?->passport ?? null,
+                            $user->createdBy?->name ?? null,
+                            $user->candidate?->training_status ?? null,
+                            $user->candidate?->medical_status ?? null,
+                            $user->candidate?->expiry_date ?? null,
+                        ]);
+                    }
+                });
+
+                fclose($handle);
+            }, 200, [
+                "Content-Type" => "text/csv",
+                "Content-Disposition" => "attachment; filename=$filename",
+            ]);
+
+            return $response;
+        }
+
+            // Count total records by cloning the query without fetching all relationships
+            $dataC = (clone $query)->count();
+
             return response()->json([
                 'success' => true,
                 'message' => 'Successful!',
