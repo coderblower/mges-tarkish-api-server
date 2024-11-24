@@ -395,6 +395,7 @@ class CandidateController extends Controller
 
             $serialNumber = 1;
 
+
             // Create a StreamedResponse to write CSV data
             $response = Response::stream(function () use ($query, $serialNumber) {
                 ob_end_clean(); // Clear any previous output
