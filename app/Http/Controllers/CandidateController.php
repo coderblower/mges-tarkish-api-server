@@ -350,6 +350,7 @@ class CandidateController extends Controller
         }
     }
     public function all(Request $request){
+
         try {
             $query = User::orderby('id', 'desc')
                 ->where('role_id', 5)
@@ -387,37 +388,39 @@ class CandidateController extends Controller
                 });
             }
 
-            $data = $request->pg == '' ? $query->get() : $query->paginate(10);
+
 
                // Export all data as CSV if requested
         if ($request->filled('export_all') && $request->export_all == true) {
+
+
+
             $filename = "candidates_export_" . now()->format('Y_m_d_H_i_s') . ".csv";
 
             $serialNumber = 1;
 
 
             // Create a StreamedResponse to write CSV data
-            $response = Response::stream(function () use ($query, $serialNumber) {
+            $response = Response::stream(function () use ($query, &$serialNumber) {
                 ob_end_clean(); // Clear any previous output
                 $handle = fopen('php://output', 'w');
 
                 // Write CSV header
                 fputcsv($handle, [
-                    'SL', 'First Name', 'Last Name', 'Passport', 'Created By',
+                    'SL', 'Name',  'Passport', 'Created By',
                     'Training Status', 'Medical Status', 'Passport Expiry Date'
                 ]);
 
                 // Fetch data and write each row to the CSV
-                $query->orderBy('updated_at', 'desc')->chunk(100, function ($users) use ($handle, $serialNumber) {
+                $query->chunk(100, function ($users) use ($handle, &$serialNumber) {
 
                     foreach ($users as $user) {
 
-                        Log::info("message", ['user'=>$user]);
+
 
                         fputcsv($handle, [
                             $serialNumber++,
-                            $user->candidate?->firstName,
-                            $user->candidate?->lastName,
+                            $user->name,
                             $user->candidate?->passport ?? null,
                             $user->createdBy?->name ?? null,
                             $user->candidate?->training_status ?? null,
@@ -435,6 +438,8 @@ class CandidateController extends Controller
 
             return $response;
         }
+
+        $data = $request->pg == '' ? $query->get() : $query->paginate(10);
 
             // Count total records by cloning the query without fetching all relationships
             $dataC = (clone $query)->count();
