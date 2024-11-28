@@ -325,6 +325,7 @@ class CandidateController extends Controller
             ]);
         }
     }
+
     public function destroy(Request $request){
         try {
             $data = Candidate::where('id', $request->id)->first();
@@ -764,6 +765,47 @@ class CandidateController extends Controller
             ]);
         }
     }
+
+
+    public function getBirthCertificate($request)
+    {
+        $image = $request->file('birth_certificate');
+        $imageName = time() . $image->getClientOriginalName();
+        $path = 'candidate_photos/';
+        $image->move($path, $imageName);
+        return $path.$imageName;
+    }
+
+
+    public function getCvUrl($request)
+    {
+        $image = $request->file('cv');
+        $imageName = time() . $image->getClientOriginalName();
+        $path = 'candidate_photos/';
+        $image->move($path, $imageName);
+        return $path.$imageName;
+    }
+
+    public function getResumeUrl($request)
+    {
+        $image = $request->file('resume');
+        $imageName = time() . $image->getClientOriginalName();
+        $path = 'candidate_photos/';
+        $image->move($path, $imageName);
+        return $path.$imageName;
+    }
+
+    public function getPassportAllPageUrl($request)
+    {
+        $image = $request->file('passport_all_page');
+        $imageName = time() . $image->getClientOriginalName();
+        $path = 'candidate_photos/';
+        $image->move($path, $imageName);
+        return $path.$imageName;
+    }
+
+
+
     public function saveQr(Request $request)
     {
         try {
