@@ -278,6 +278,7 @@ class CandidateController extends Controller
                 }
                 $this->expUrl = $this->getExpUrl($request);
             }
+
             else {
                 $this->expUrl = $experience_file;
             }
