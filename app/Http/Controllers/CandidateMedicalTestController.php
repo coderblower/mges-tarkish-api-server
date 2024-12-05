@@ -31,6 +31,7 @@ class CandidateMedicalTestController extends Controller
 //            }
             $can = CandidateMedicalTest::where('user_id',$request->user_id)->first();
             $userr = User::where('unique_id',$request->unique_id)->first();
+            $candidate = Candidate::where('user_id', $request->user_id)->first();
             $partner = Partner::where('user_id',auth()->user()->id)->first();
             $quota_used = $partner->quota_used;
             if ($userr){
@@ -57,6 +58,8 @@ class CandidateMedicalTestController extends Controller
                     $data->note = $request->note;
 //            $data->report = $request->report;
                     if ($partner->quota >=1){
+                        $candidate->medical_center_id = auth()->user()->id;
+                        $candidate->update();
                         $data->save();
                         $partner->quota_used = $quota_used + 1;
                         $partner->update();

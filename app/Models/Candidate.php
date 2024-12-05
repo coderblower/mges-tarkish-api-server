@@ -29,4 +29,9 @@ class Candidate extends Model
     {
         return $this->belongsTo(Designation::class,'designation_id', 'id');
     }
+    public function country()
+    {
+        return $this->belongsTo(Country::class, 'country'); // Adjust 'country_id' if the column name is different
+    }
+
 }
