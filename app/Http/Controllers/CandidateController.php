@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Validator;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use function League\Flysystem\move;
 
-use Barryvdh\DomPDF\Facade as PDF;
+use Dompdf\Dompdf;
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -892,7 +892,7 @@ class CandidateController extends Controller
         }
 
         // Generate PDF with dompdf
-        $pdf = PDF::loadView('qr_pdf', ['qrPath' => $qrPath]);
+        $pdf = Dompdf::loadView('qr_pdf', ['qrPath' => $qrPath]);
 
         // Download the PDF
         return response()->download($pdf,  'qr_code.pdf');
