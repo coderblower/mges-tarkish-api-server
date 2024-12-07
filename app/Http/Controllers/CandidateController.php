@@ -17,6 +17,7 @@ use function League\Flysystem\move;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Response;
+use Barryvdh\DomPDF\Facade as PDF;
 
 
 class CandidateController extends Controller
@@ -873,29 +874,26 @@ class CandidateController extends Controller
     }
 
     public function get_qr(Request $request, $id)
-    {
-        $data = Candidate::where('user_id', $id)->first();
-        $qr = $data->qr_code;
+{
+    $data = Candidate::where('user_id', $id)->first();
+    $qr = $data->qr_code;
 
-        if (!$data || !$data->qr_code) {
-            return response()->json(['message' => 'QR code not found'], 404);
-        }
-
-        $qrPath = public_path($data->qr_code); // Assuming this contains the path to the QR image
-
-        // Check if the QR code image exists
-        if (!file_exists($qrPath)) {
-            return response()->json(['message' => 'QR code file not found'], 404);
-        }
-
-        // Convert the QR code image to a PDF
-        $pdf = new \jsPDF();
-        $pdf->addImage($qrPath, 'PNG', 10, 10, 180, 160); // Adjust coordinates and size as needed
-        $pdfBlob = $pdf->output('blob');
-
-        // Create an <a> element for download
-        $url = \URL::to($pdfBlob);
-        return response()->download($url, 'qr_code.pdf');
+    if (!$data || !$data->qr_code) {
+        return response()->json(['message' => 'QR code not found'], 404);
     }
+
+    $qrPath = public_path($data->qr_code); // Assuming this contains the path to the QR image
+
+    // Check if the QR code image exists
+    if (!file_exists($qrPath)) {
+        return response()->json(['message' => 'QR code file not found'], 404);
+    }
+
+    // Generate PDF with dompdf
+    $pdf = PDF::loadView('qr_pdf', ['qrPath' => $qrPath]);
+
+    // Download the PDF
+    return $pdf->download('qr_code.pdf');
+}
 
 }
