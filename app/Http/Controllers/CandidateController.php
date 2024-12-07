@@ -895,16 +895,18 @@ class CandidateController extends Controller
     $base64Image = 'data:image/png;base64,' . $imageData;
 
     // Embed the image in the HTML
-    $html = '<html>
-                <body>
-                    <div style="text-align: center;">
-                    Name : '.$data->firstName+$data->lastName.'
-                    Passport : '.$data->passport.'
-                        <h2>Your QR Code</h2>
-                        <img src="' . $base64Image . '" style="width: 300px; height: 300px;" alt="QR Code">
-                    </div>
-                </body>
-             </html>';
+// Embed the image in the HTML
+$html = '<html>
+            <body>
+                <div style="text-align: center;">
+                    <p>Name: ' . $data->firstName . ' ' . $data->lastName . '</p>
+                    <p>Passport: ' . $data->passport . '</p>
+                    <h2>Your QR Code</h2>
+                    <img src="' . $base64Image . '" style="width: 300px; height: 300px;" alt="QR Code">
+                </div>
+            </body>
+         </html>';
+
 
     // Create an instance of Dompdf
     $dompdf = new \Dompdf\Dompdf();
