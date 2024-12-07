@@ -899,9 +899,10 @@ class CandidateController extends Controller
 $html = '<html>
             <body>
                 <div style="text-align: center;">
+                    <h2>MGES Global </h2>
                     <p>Name: ' . $data->firstName . ' ' . $data->lastName . '</p>
                     <p>Passport: ' . $data->passport . '</p>
-                    <h2>Your QR Code</h2>
+                    <h2> QR Code</h2>
                     <img src="' . $base64Image . '" style="width: 300px; height: 300px;" alt="QR Code">
                 </div>
             </body>
