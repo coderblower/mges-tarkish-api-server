@@ -883,7 +883,9 @@ class CandidateController extends Controller
         return response()->json(['message' => 'QR code not found'], 404);
     }
 
-    $qrPath = public_path($data->qr_code); // Path to the QR code image
+    $qrPath = public_path($data->qr_code);
+    $logo = public_path("logo.png");
+     // Path to the QR code image
 
     // Check if the QR code image exists
     if (!file_exists($qrPath)) {
@@ -891,19 +893,23 @@ class CandidateController extends Controller
     }
 
     // Convert the image to a base64 blob
-    $imageData = base64_encode(file_get_contents($qrPath));
-    $base64Image = 'data:image/png;base64,' . $imageData;
+    function convertToImage($qrPath){
+        $imageData = base64_encode(file_get_contents($qrPath));
+        $base64Image = 'data:image/png;base64,' . $imageData;
+        return $base64Image;
+    }
 
     // Embed the image in the HTML
 // Embed the image in the HTML
 $html = '<html>
             <body>
                 <div style="text-align: center;">
-                    <h2>MGES Global </h2>
+                <span><img src="' . convertToImage($logo) . '" style="width: 60px; height: 60px;" alt="QR Code">
+                    <h2>MGES GLOBAL </h2></span>
                     <p>Name: ' . $data->firstName . ' ' . $data->lastName . '</p>
                     <p>Passport: ' . $data->passport . '</p>
                     <h2> QR Code</h2>
-                    <img src="' . $base64Image . '" style="width: 300px; height: 300px;" alt="QR Code">
+                    <img src="' . convertToImage($qrPath) . '" style="width: 300px; height: 300px;" alt="QR Code">
                 </div>
             </body>
          </html>';
