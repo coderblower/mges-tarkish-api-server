@@ -890,10 +890,10 @@ class CandidateController extends Controller
         }
 
         // Generate PDF with dompdf
-        // $pdf = PDF::loadView('qr_pdf', ['qrPath' => $qrPath]);
+        $pdf = PDF::loadView('qr_pdf', ['qrPath' => $qrPath]);
 
         // Download the PDF
-        return response()->download($qrPath,  'qr_code.pdf');
+        return response()->download($pdf,  'qr_code.pdf');
     }
 
 }
