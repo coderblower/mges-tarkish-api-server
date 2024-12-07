@@ -14,6 +14,8 @@ use Illuminate\Support\Facades\Validator;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use function League\Flysystem\move;
 
+use Barryvdh\DomPDF\Facade as PDF;
+
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Response;
