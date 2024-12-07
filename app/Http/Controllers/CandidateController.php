@@ -904,7 +904,7 @@ class CandidateController extends Controller
 $html = '<html>
             <body>
                 <div style="text-align: center;">
-                <span><img src="' . convertToImage($logo) . '" style="width: 60px; height: 60px;" alt="QR Code">
+                <span><img src="' . convertToImage($logo) . '" style="width: 100px; height: 60px;" alt="QR Code">
                     <h2>MGES GLOBAL </h2></span>
                     <p>Name: ' . $data->firstName . ' ' . $data->lastName . '</p>
                     <p>Passport: ' . $data->passport . '</p>
