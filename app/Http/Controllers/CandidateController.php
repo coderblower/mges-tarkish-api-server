@@ -893,7 +893,7 @@ class CandidateController extends Controller
         // $pdf = PDF::loadView('qr_pdf', ['qrPath' => $qrPath]);
 
         // Download the PDF
-        return $pdf->download('qr_code.pdf');
+        return response()->download('qr_code.pdf');
     }
 
 }
