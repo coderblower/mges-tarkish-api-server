@@ -872,28 +872,30 @@ class CandidateController extends Controller
         return response()->json(['message' => 'File deletion recorded successfully.']);
     }
 
-    public function get_qr(Request $request, $id){
+    public function get_qr(Request $request, $id)
+    {
         $data = Candidate::where('user_id', $id)->first();
         $qr = $data->qr_code;
-
-
 
         if (!$data || !$data->qr_code) {
             return response()->json(['message' => 'QR code not found'], 404);
         }
 
-        $qrPath = $data->qr_code; // Assuming this contains the path to the QR image
+        $qrPath = public_path($data->qr_code); // Assuming this contains the path to the QR image
 
         // Check if the QR code image exists
-        $qrPath = public_path($data->qr_code);
-
-        // Get the file contents
         if (!file_exists($qrPath)) {
             return response()->json(['message' => 'QR code file not found'], 404);
         }
 
+        // Convert the QR code image to a PDF
+        $pdf = new \jsPDF();
+        $pdf->addImage($qrPath, 'PNG', 10, 10, 180, 160); // Adjust coordinates and size as needed
+        $pdfBlob = $pdf->output('blob');
 
-          return response()->download($qrPath, 'qr_code.png');
+        // Create an <a> element for download
+        $url = \URL::to($pdfBlob);
+        return response()->download($url, 'qr_code.pdf');
     }
 
 }
