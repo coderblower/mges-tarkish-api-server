@@ -884,7 +884,13 @@ class CandidateController extends Controller
             return response()->json(['message' => 'QR code not found'], 404);
         }
 
-        $qrPath = public_path($data->qr_code); // Ensure this path is correct
+        $pdf = new \Dompdf\Dompdf();
+
+        // Add the QR code image directly to the PDF
+        $pdf->addImage($qrPath, 'PNG', 10, 10, 180, 160); // Adjust coordinates and size as needed
+
+        // Output the PDF as a blob
+        $pdfContent = $pdf->output(); // Ensure this path is correct
 
         // Check if the QR code image exists
         if (!file_exists($qrPath)) {
@@ -892,10 +898,13 @@ class CandidateController extends Controller
         }
 
         // Generate PDF with dompdf
-        $pdf = PDF::loadView('qr_pdf', ['qrPath' => $qrPath]);
+
 
         // Download the PDF
-        return response()->download($pdf,  'qr_code.pdf');
+        return response()->make($pdfContent, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="qr_code.pdf"',
+        ]);
     }
 
 }
