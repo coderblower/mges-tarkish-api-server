@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Response;
 
+
 class CandidateController extends Controller
 {
     public function __construct()
@@ -870,4 +871,29 @@ class CandidateController extends Controller
 
         return response()->json(['message' => 'File deletion recorded successfully.']);
     }
+
+    public function get_qr(Request $request, $id){
+        $data = Candidate::where('user_id', $id)->first();
+        $qr = $data->qr_code;
+
+        if (!$data || !$data->qr_code) {
+            return response()->json(['message' => 'QR code not found'], 404);
+        }
+
+        $qrPath = $data->qr_code; // Assuming this contains the path to the QR image
+
+        // Check if the QR code image exists
+        if (!Storage::exists($qrPath)) {
+            return response()->json(['message' => 'QR code file not found'], 404);
+        }
+
+        // Get the file contents
+        $qrContent = Storage::get($qrPath);
+        $mimeType = Storage::mimeType($qrPath); // Get the mime type of the file
+
+        return response($qrContent)
+            ->header('Content-Type', $mimeType)
+            ->header('Content-Disposition', 'attachment; filename="qr_code.png"');
+    }
+
 }
