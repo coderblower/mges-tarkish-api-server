@@ -885,17 +885,15 @@ class CandidateController extends Controller
         $qrPath = $data->qr_code; // Assuming this contains the path to the QR image
 
         // Check if the QR code image exists
-        if (!Storage::exists($qrPath)) {
+        $qrPath = public_path($data->qr_code);
+
+        // Get the file contents
+        if (!file_exists($qrPath)) {
             return response()->json(['message' => 'QR code file not found'], 404);
         }
 
-        // Get the file contents
-        $qrContent = Storage::get($qrPath);
-        $mimeType = Storage::mimeType($qrPath); // Get the mime type of the file
 
-        return response($qrContent)
-            ->header('Content-Type', $mimeType)
-            ->header('Content-Disposition', 'attachment; filename="qr_code.png"');
+          return response()->download($qrPath, 'qr_code.png');
     }
 
 }
