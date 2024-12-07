@@ -913,8 +913,9 @@ class CandidateController extends Controller
         $dompdf->render();
 
         // Output the generated PDF for download
-        return response()->streamDownload(function () use ($dompdf) {
-            echo $dompdf->output();
-        }, 'qr_code.pdf');
+        return response($dompdf->output(), 200)
+            ->header('Content-Type', 'application/pdf')
+            ->header('Content-Disposition', 'attachment; filename="qr_code.pdf"');
     }
+
 }
