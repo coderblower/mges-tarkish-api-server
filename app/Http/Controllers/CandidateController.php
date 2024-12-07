@@ -17,7 +17,7 @@ use function League\Flysystem\move;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Response;
-use Barryvdh\DomPDF\Facade as PDF;
+
 
 
 class CandidateController extends Controller
@@ -893,7 +893,7 @@ class CandidateController extends Controller
         // $pdf = PDF::loadView('qr_pdf', ['qrPath' => $qrPath]);
 
         // Download the PDF
-        return response()->download('qr_code.pdf');
+        return response()->download($qrPath,  'qr_code.pdf');
     }
 
 }
