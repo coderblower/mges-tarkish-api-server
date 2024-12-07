@@ -876,6 +876,8 @@ class CandidateController extends Controller
         $data = Candidate::where('user_id', $id)->first();
         $qr = $data->qr_code;
 
+        return  $qr;
+
         if (!$data || !$data->qr_code) {
             return response()->json(['message' => 'QR code not found'], 404);
         }
