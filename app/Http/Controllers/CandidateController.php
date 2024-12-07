@@ -884,7 +884,7 @@ class CandidateController extends Controller
             return response()->json(['message' => 'QR code not found'], 404);
         }
 
-        $pdf = new \Dompdf\Dompdf();
+        $pdf = new PDF;
 
         // Add the QR code image directly to the PDF
         $pdf->addImage($qrPath, 'PNG', 10, 10, 180, 160); // Adjust coordinates and size as needed
