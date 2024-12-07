@@ -874,26 +874,26 @@ class CandidateController extends Controller
     }
 
     public function get_qr(Request $request, $id)
-{
-    $data = Candidate::where('user_id', $id)->first();
-    $qr = $data->qr_code;
+    {
+        $data = Candidate::where('user_id', $id)->first();
+        $qr = $data->qr_code;
 
-    if (!$data || !$data->qr_code) {
-        return response()->json(['message' => 'QR code not found'], 404);
+        if (!$data || !$data->qr_code) {
+            return response()->json(['message' => 'QR code not found'], 404);
+        }
+
+        $qrPath = public_path($data->qr_code); // Ensure this path is correct
+
+        // Check if the QR code image exists
+        if (!file_exists($qrPath)) {
+            return response()->json(['message' => 'QR code file not found'], 404);
+        }
+
+        // Generate PDF with dompdf
+        $pdf = PDF::loadView('qr_pdf', ['qrPath' => $qrPath]);
+
+        // Download the PDF
+        return $pdf->download('qr_code.pdf');
     }
-
-    $qrPath = public_path($data->qr_code); // Assuming this contains the path to the QR image
-
-    // Check if the QR code image exists
-    if (!file_exists($qrPath)) {
-        return response()->json(['message' => 'QR code file not found'], 404);
-    }
-
-    // Generate PDF with dompdf
-    $pdf = PDF::loadView('qr_pdf', ['qrPath' => $qrPath]);
-
-    // Download the PDF
-    return $pdf->download('qr_code.pdf');
-}
 
 }
