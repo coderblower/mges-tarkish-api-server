@@ -878,33 +878,43 @@ class CandidateController extends Controller
     public function get_qr(Request $request, $id)
     {
         $data = Candidate::where('user_id', $id)->first();
-        $qr = $data->qr_code;
 
         if (!$data || !$data->qr_code) {
             return response()->json(['message' => 'QR code not found'], 404);
         }
 
-        $pdf =  new \Dompdf\Dompdf();
-
-        // Add the QR code image directly to the PDF
-        $pdf->addImage($qrPath, 'PNG', 10, 10, 180, 160); // Adjust coordinates and size as needed
-
-        // Output the PDF as a blob
-        $pdfContent = $pdf->output(); // Ensure this path is correct
+        $qrPath = public_path($data->qr_code); // Ensure this path is correct
 
         // Check if the QR code image exists
         if (!file_exists($qrPath)) {
             return response()->json(['message' => 'QR code file not found'], 404);
         }
 
-        // Generate PDF with dompdf
+        // Embed the QR code in an HTML template
+        $html = '<html>
+                    <body>
+                        <div style="text-align: center;">
+                            <h2>Your QR Code</h2>
+                            <img src="' . $qrPath . '" style="width: 300px; height: 300px;" alt="QR Code">
+                        </div>
+                    </body>
+                 </html>';
 
+        // Create an instance of Dompdf
+        $dompdf = new \Dompdf\Dompdf();
 
-        // Download the PDF
-        return response()->make($pdfContent, 200, [
-            'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'attachment; filename="qr_code.pdf"',
-        ]);
+        // Load the HTML content
+        $dompdf->loadHtml($html);
+
+        // Set paper size and orientation
+        $dompdf->setPaper('A4', 'portrait');
+
+        // Render the PDF
+        $dompdf->render();
+
+        // Output the generated PDF for download
+        return response()->streamDownload(function () use ($dompdf) {
+            echo $dompdf->output();
+        }, 'qr_code.pdf');
     }
-
 }
