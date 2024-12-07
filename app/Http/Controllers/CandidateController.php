@@ -876,46 +876,51 @@ class CandidateController extends Controller
     }
 
     public function get_qr(Request $request, $id)
-    {
-        $data = Candidate::where('user_id', $id)->first();
+{
+    $data = Candidate::where('user_id', $id)->first();
 
-        if (!$data || !$data->qr_code) {
-            return response()->json(['message' => 'QR code not found'], 404);
-        }
-
-        $qrPath = public_path($data->qr_code); // Ensure this path is correct
-
-        // Check if the QR code image exists
-        if (!file_exists($qrPath)) {
-            return response()->json(['message' => 'QR code file not found'], 404);
-        }
-
-        // Embed the QR code in an HTML template
-        $html = '<html>
-                    <body>
-                        <div style="text-align: center;">
-                            <h2>Your QR Code</h2>
-                            <img src="' . $qrPath . '" style="width: 300px; height: 300px;" alt="QR Code">
-                        </div>
-                    </body>
-                 </html>';
-
-        // Create an instance of Dompdf
-        $dompdf = new \Dompdf\Dompdf();
-
-        // Load the HTML content
-        $dompdf->loadHtml($html);
-
-        // Set paper size and orientation
-        $dompdf->setPaper('A4', 'portrait');
-
-        // Render the PDF
-        $dompdf->render();
-
-        // Output the generated PDF for download
-        return response($dompdf->output(), 200)
-            ->header('Content-Type', 'application/pdf')
-            ->header('Content-Disposition', 'attachment; filename="qr_code.pdf"');
+    if (!$data || !$data->qr_code) {
+        return response()->json(['message' => 'QR code not found'], 404);
     }
+
+    $qrPath = public_path($data->qr_code); // Path to the QR code image
+
+    // Check if the QR code image exists
+    if (!file_exists($qrPath)) {
+        return response()->json(['message' => 'QR code file not found'], 404);
+    }
+
+    // Convert the image to a base64 blob
+    $imageData = base64_encode(file_get_contents($qrPath));
+    $base64Image = 'data:image/png;base64,' . $imageData;
+
+    // Embed the image in the HTML
+    $html = '<html>
+                <body>
+                    <div style="text-align: center;">
+                        <h2>Your QR Code</h2>
+                        <img src="' . $base64Image . '" style="width: 300px; height: 300px;" alt="QR Code">
+                    </div>
+                </body>
+             </html>';
+
+    // Create an instance of Dompdf
+    $dompdf = new \Dompdf\Dompdf();
+
+    // Load the HTML content
+    $dompdf->loadHtml($html);
+
+    // Set paper size and orientation
+    $dompdf->setPaper('A4', 'portrait');
+
+    // Render the PDF
+    $dompdf->render();
+
+    // Output the generated PDF for download
+    return response($dompdf->output(), 200)
+        ->header('Content-Type', 'application/pdf')
+        ->header('Content-Disposition', 'attachment; filename="qr_code.pdf"');
+}
+
 
 }
