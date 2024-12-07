@@ -898,6 +898,8 @@ class CandidateController extends Controller
     $html = '<html>
                 <body>
                     <div style="text-align: center;">
+                    Name : '.$data->firstName+$data->lastName.'
+                    Passport : '.$data->passport.'
                         <h2>Your QR Code</h2>
                         <img src="' . $base64Image . '" style="width: 300px; height: 300px;" alt="QR Code">
                     </div>
