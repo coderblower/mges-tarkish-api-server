@@ -27,10 +27,9 @@ class UserController extends Controller
         // Validation rules
         $validator = Validator::make($request->all(), [
             'name' => 'required|string',
-            'email' => 'required|string|unique:users',
-            'phone' => 'required|string|min:11|unique:users',
-
-            'passport' => 'required|unique:candidates|regex:/^[A-Za-z].*/',
+            'email' => 'required|string|unique:users,email,NULL,id,deleted_at,NULL',
+            'phone' => 'required|string|min:11|unique:users,phone,NULL,id,deleted_at,NULL',
+            'passport' => 'required|unique:candidates,passport,NULL,id,deleted_at,NULL|regex:/^[A-Za-z].*/',
         ]);
 
         // Return validation error response if validation fails
