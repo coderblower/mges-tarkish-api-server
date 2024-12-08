@@ -196,12 +196,7 @@ class CandidateController extends Controller
                 return response()->json($req->errors(), 422);
             }
             $data = Candidate::where('id', $request->id)->first();
-            $image = $data->photo?$data->photo: null;
-            $passport_file = $data->passport_file?$data->passport_file:null;
-            $nid_file = $data->nid_file?$data->nid_file:null;
-            $academic_file = $data->academic_file?$data->academic_file: Null;
-            $experience_file = $data->experience_file?$data->experience_file: null;
-            $training_file = $data->training_file?$data->training_file:null;
+          
             $qr = $data->qr_code;
             $data->gender = $request->gender;
             $data->marital_status = $request->marital_status;
@@ -246,71 +241,33 @@ class CandidateController extends Controller
 //            $data->medical_status = $request->medical_status;
 //            $data->training_status = $request->training_status;
             $data->is_active = $request->is_active;
-            if($request->file('nid_file')) {
-                if (file_exists($nid_file)) {
-                    unlink($nid_file);
-                }
-                $this->nidUrl = $this->getNidUrl($request);
+            
+            
+
+
+
+            foreach (['pif_file', 'passport_all_page', 'birth_certificate', 'resume', 'cv', 'nid_file', 'photo', 'experience_file', 'academic_file', 'passport_file', 'training_file' ] as $fileType) {
+                $data->$fileType = $this->reset_file_link($request->file($fileType), $data->$fileType);
             }
-            else {
-                $this->nidUrl = $nid_file;
-            }
-            $data->nid_file = $this->nidUrl;
-            if($request->file('photo')) {
-                if (file_exists($image)) {
-                    unlink($image);
-                }
-                $this->imageUrl = $this->getImageUrl($request);
-            }
-            else {
-                $this->imageUrl = $image;
-            }
-            $data->photo = $this->imageUrl;
-            if($request->file('passport_file')) {
-                if (file_exists($passport_file)) {
-                    unlink($passport_file);
-                }
-                $this->passportUrl = $this->getPassportUrl($request);
-            }
-            else {
-                $this->passportUrl = $passport_file;
-            }
-            $data->passport_file = $this->passportUrl;
-            if($request->file('experience_file')) {
-                if (file_exists($experience_file)) {
-                    unlink($experience_file);
-                }
-                $this->expUrl = $this->getExpUrl($request);
+            
+            // Update the data in the database
+            $data->update();
+
+
+
+
+
+
+           
+
+            // Check if the file exists before deleting
+            if (file_exists($qr)) {
+                unlink($qr); // Delete the existing file
             }
 
-            else {
-                $this->expUrl = $experience_file;
-            }
-            $data->experience_file = $this->expUrl;
-            if($request->file('academic_file')) {
-                if (file_exists($academic_file)) {
-                    unlink($academic_file);
-                }
-                $this->academicUrl = $this->getAcademicUrl($request);
-            }
-            else {
-                $this->academicUrl = $academic_file;
-            }
-            $data->academic_file = $this->academicUrl;
-            if($request->file('training_file')) {
-                if (file_exists($training_file)) {
-                    unlink($training_file);
-                }
-                $this->trainingUrl = $this->getTrainingUrl($request);
-            }
-            else {
-                $this->trainingUrl = $training_file;
-            }
-            $data->training_file = $this->trainingUrl;
-//            if (file_exists($qr)) {
-//                unlink($qr);
-//            }
+            // Generate the new QR file URL
             $data->qr_code = $this->getQRUrl($request);
+
             $data->update();
 //            $user = User::where('id', $data->user_id)->first();
 //            $pass = $data->password;
@@ -931,6 +888,35 @@ $html = '<html>
     return response($dompdf->output(), 200)
         ->header('Content-Type', 'application/pdf')
         ->header('Content-Disposition', 'attachment; filename="qr_code.pdf"');
+}
+
+
+private function get_url($server_file)
+{
+    $image = $server_file;
+    $imageName = time() . $image->getClientOriginalName();
+    $path = 'candidate_photos/';
+    $image->move($path, $imageName);
+    return $path.$imageName;
+
+
+}
+
+private function reset_file_link($server_file, $file_name)
+{
+    if ($server_file) {
+        // Check and delete the existing file
+        if (file_exists($file_name)) {
+            Log::info('File ', ['file' => $file_name]);
+            unlink($file_name);
+        }
+
+        // Generate and return the new file URL
+        return $this->get_url($server_file);
+    }
+
+    // Return the existing file name if no new file is uploaded
+    return $file_name;
 }
 
 
