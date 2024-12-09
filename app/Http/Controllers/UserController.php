@@ -285,7 +285,7 @@ class UserController extends Controller
     }
     public function getUser(Request $request){
         try {
-            $data = User::with('role')->with('candidate')->with('partner')->with('candidate.designation')->with('report')->with('preskilled')->with('skill')->where('id',$request->id)->first();
+            $data = User::with('role')->with(['candidate', 'candidate.country'])->with('partner')->with('candidate.designation')->with('report')->with('preskilled')->with('skill')->where('id',$request->id)->first();
             return response()->json([
                 'success' => true,
                 'message' => 'Successful!',
