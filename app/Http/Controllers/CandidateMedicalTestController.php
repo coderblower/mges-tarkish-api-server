@@ -287,23 +287,36 @@ class CandidateMedicalTestController extends Controller
                     $count = $query->count();
                 }else{
                     $query = CandidateMedicalTest::with('user')
-                        ->when($request->agent_id != '', function($query) use ($request)
-                        { $query->whereHas('user', function ($query) use ($request) {
-                            $query->where('created_by', $request->agent_id);});})
-                        ->when($request->user_id != '', function($query) use ($request) { $query->where('enrolled_by', $request->user_id);})
-                        ->when($request->result != '', function($query) use ($request) { $query->where('result', $request->result);})
-                        ->with('enrolledBy')
-                        ->with('country')
-                        ->with(['candidate'=> function ($query) {
-                            $query->select('designation_id', 'id', 'user_id', 'passport', 'photo', 'qr_code', 'firstName', 'lastName' );
-                        }])
-                        ->when($request->passport != '', function($query) use ($request)
-                        { $query->whereHas('candidate', function ($query) use ($request) {
-                            $query->where('passport', 'like', "%$request->passport%");});})
-                        ->with('user.createdby')
-                        ->orderBy('id','desc')
-                        ->paginate(20);
-                    $count = $query->count();
+                    ->when($request->agent_id != '', function ($query) use ($request) {
+                        $query->whereHas('user', function ($query) use ($request) {
+                            $query->where('created_by', $request->agent_id);
+                        });
+                    })
+                    ->when($request->user_id != '', function ($query) use ($request) {
+                        $query->where('enrolled_by', $request->user_id);
+                    })
+                    ->when($request->result != '', function ($query) use ($request) {
+                        $query->where('result', $request->result);
+                    })
+                    ->when($request->country != '', function ($query) use ($request) {
+                        $query->where('country_id', $request->country); // Adjust 'country_id' if the column name is different
+                    })
+                    ->with('enrolledBy')
+                    ->with('country')
+                    ->with(['candidate' => function ($query) {
+                        $query->select('designation_id', 'id', 'user_id', 'passport', 'photo', 'qr_code', 'firstName', 'lastName');
+                    }])
+                    ->when($request->passport != '', function ($query) use ($request) {
+                        $query->whereHas('candidate', function ($query) use ($request) {
+                            $query->where('passport', 'like', "%$request->passport%");
+                        });
+                    })
+                    ->with('user.createdby')
+                    ->orderBy('id', 'desc')
+                    ->paginate(20);
+                
+                $count = $query->count();
+                
                 }
             }else{
                 if ($request->pg == '') {
