@@ -181,6 +181,50 @@ class FinalTestController extends Controller
             ]);
         }
     }
+
+
+    public function upload_certificate(){
+        try {
+
+            $id = auth::user()->id; 
+
+
+            $final_test= FinalTest::where('id', $id)->first(); 
+
+
+            $final_test->certificate_upload = $request->certificate_upload ? $this->get_final_test_certificate_name($request) : null;
+
+            $final_test->save();
+
+
+            
+
+
+
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Successful!',
+                'data' => $data,
+            ]);
+        }catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'failed!',
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    public function get_final_test_certificate_name($request)
+    {
+        $image = $request->file('passport_file');
+        $imageName = time() . $image->getClientOriginalName();
+        $path = 'candidate_photos/';
+        $image->move($path, $imageName);
+        return $path.$imageName;
+    }
+    
     public function filterTrainingReport(Request $request){
         try {
             if (auth()->user()->role_id == 1){

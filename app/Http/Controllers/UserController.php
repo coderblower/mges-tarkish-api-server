@@ -497,7 +497,7 @@ Web link: MGES.GLOBAL';
        $startTime = microtime(true);
 
 
-
+        Log::info('message', ['request' => $request->all()]);
 
         // Base query with required relationships and specific fields
         $query = User::select('id', 'created_by', 'email', 'phone', 'name')
@@ -599,6 +599,8 @@ Web link: MGES.GLOBAL';
         // Measure execution time
         $endTime = microtime(true);
         $queryTime = round(($endTime - $startTime), 2);
+
+        Log::info('data', ['data' => $results]);
 
         return response()->json([
             'data' => $results,
