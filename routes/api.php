@@ -4,6 +4,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CandidateController;
 use App\Http\Controllers\CandidateMedicalTestController;
 use App\Http\Controllers\CandidateSkillTestController;
+use App\Http\Controllers\CommonController;
 use App\Http\Controllers\CountryController;
 use App\Http\Controllers\DesignationController;
 use App\Http\Controllers\FinalTestController;
@@ -175,6 +176,19 @@ Route::group(['name'=>'Designation','middleware' => 'api','prefix' => 'designati
 //    Route::post('/destroy', [CountryController::class, 'destroy']);
     Route::post('/all', [DesignationController::class, 'all']);
 });
+
+
+
+Route::group(['name'=>'getFile','middleware' => 'api','prefix' => 'file'], function () {
+    Route::post('/get_file', [CommonController::class, 'downloadFile']);
+//    Route::post('/update', [CountryController::class, 'update']);
+//    Route::post('/destroy', [CountryController::class, 'destroy']);
+});
+ 
+
+
+
+
 
 //Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 //    return $request->user();
