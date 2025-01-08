@@ -9,8 +9,10 @@ class CommonController extends Controller
 {
     public function downloadFile(Request $request)
     {
+
+        
         // Retrieve the file name from the request (assuming it's passed as a query parameter)
-        $file = $request->query('file');
+        $file = $request->file;
 
         // Validate if the file parameter is provided
         if (!$file) {
