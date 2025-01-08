@@ -175,12 +175,12 @@ Route::group(['name'=>'Designation','middleware' => '','prefix' => 'designation'
 //    Route::post('/update', [CountryController::class, 'update']);
 //    Route::post('/destroy', [CountryController::class, 'destroy']);
     Route::post('/all', [DesignationController::class, 'all']);
+    Route::post('/get_file', [CommonController::class, 'downloadFile']);
 });
 
 
 
 
-Route::post('/get_file', [CommonController::class, 'downloadFile']);
 
 
 
