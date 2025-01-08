@@ -179,14 +179,8 @@ Route::group(['name'=>'Designation','middleware' => 'api','prefix' => 'designati
 
 
 
-Route::group(['name'=>'getFile','middleware' => 'api','prefix' => 'file'], function () {
-    Route::post('/get_file', [CommonController::class, 'downloadFile']);
-//    Route::post('/update', [CountryController::class, 'update']);
-//    Route::post('/destroy', [CountryController::class, 'destroy']);
-});
- 
 
-
+Route::post('/get_file', [CommonController::class, 'downloadFile']);
 
 
 
