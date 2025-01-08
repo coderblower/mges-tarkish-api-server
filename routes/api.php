@@ -170,7 +170,7 @@ Route::group(['name'=>'Country','middleware' => 'api','prefix' => 'country'], fu
     Route::post('/destroy', [CountryController::class, 'destroy']);
     Route::post('/all', [CountryController::class, 'all']);
 });
-Route::group(['name'=>'Designation','middleware' => 'api','prefix' => 'designation'], function () {
+Route::group(['name'=>'Designation','middleware' => '','prefix' => 'designation'], function () {
     Route::post('/create', [DesignationController::class, 'create']);
 //    Route::post('/update', [CountryController::class, 'update']);
 //    Route::post('/destroy', [CountryController::class, 'destroy']);
