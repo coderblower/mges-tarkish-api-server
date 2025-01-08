@@ -169,13 +169,13 @@ Route::group(['name'=>'Country','middleware' => 'api','prefix' => 'country'], fu
     Route::post('/update', [CountryController::class, 'update']);
     Route::post('/destroy', [CountryController::class, 'destroy']);
     Route::post('/all', [CountryController::class, 'all']);
+    Route::post('/get_file', [CommonController::class, 'downloadFile']);
 });
 Route::group(['name'=>'Designation','middleware' => '','prefix' => 'designation'], function () {
     Route::post('/create', [DesignationController::class, 'create']);
 //    Route::post('/update', [CountryController::class, 'update']);
 //    Route::post('/destroy', [CountryController::class, 'destroy']);
     Route::post('/all', [DesignationController::class, 'all']);
-    Route::post('/get_file', [CommonController::class, 'downloadFile']);
 });
 
 
