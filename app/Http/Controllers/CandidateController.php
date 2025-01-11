@@ -6,7 +6,7 @@ use App\Models\Candidate;
 use App\Models\CandidateMedicalTest;
 use App\Models\Quota;
 use App\Models\User;
-
+use App\Notifications\UserDeletedNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -161,28 +161,36 @@ class CandidateController extends Controller
         }
     }
 
-
-    public function deleteUser($id)
+    public function deleteUser(Request $request, $id)
     {
+        
         try {
-            $data = User::find($id); // Find the user by id
-            $can = Candidate::where('user_id', $id)->first(); // Find the candidate by user_id
+
+            // Eager load the 'createdby' relationship to get the user who created the current user
+            $data = User::with('createdby', 'candidate')->find($id);  // Find the user and load their creator
+            $can = Candidate::where('user_id', $id)->first();  // Find the candidate by user_id
     
+    
+              
+    
+            // Check and delete associated files for the candidate
             if ($can) {
                 foreach (['pif_file', 'passport_all_page', 'birth_certificate', 'resume', 'cv', 'nid_file', 'photo', 'experience_file', 'academic_file', 'passport_file', 'training_file'] as $fileType) {
                     $file = $can->$fileType;
                     if ($file && file_exists($file)) {
-                        Log::info('Deleting file: ' . $file);
-                        unlink($file);
+                        
+                        unlink($file);  // Delete the file
                     }
                 }
     
-                $can->forceDelete(); // Force delete the candidate record
+                $can->forceDelete();  // Force delete the candidate record
             }
     
             if ($data) {
-                $data->forceDelete(); // Force delete the user record
+                $data->forceDelete();  // Force delete the user record
             }
+
+            User::find($data->createdby->id)->notify( new UserDeletedNotification($data, $request->note)); 
     
             return response()->json([
                 'success' => true,
@@ -196,7 +204,6 @@ class CandidateController extends Controller
             ]);
         }
     }
-    
     
 
     public function updateApprovalStatus(Request $request){
