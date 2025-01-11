@@ -160,6 +160,45 @@ class CandidateController extends Controller
             ]);
         }
     }
+
+
+    public function deleteUser($id)
+    {
+        try {
+            $data = User::find($id); // Find the user by id
+            $can = Candidate::where('user_id', $id)->first(); // Find the candidate by user_id
+    
+            if ($can) {
+                foreach (['pif_file', 'passport_all_page', 'birth_certificate', 'resume', 'cv', 'nid_file', 'photo', 'experience_file', 'academic_file', 'passport_file', 'training_file'] as $fileType) {
+                    $file = $can->$fileType;
+                    if ($file && file_exists($file)) {
+                        Log::info('Deleting file: ' . $file);
+                        unlink($file);
+                    }
+                }
+    
+                $can->forceDelete(); // Force delete the candidate record
+            }
+    
+            if ($data) {
+                $data->forceDelete(); // Force delete the user record
+            }
+    
+            return response()->json([
+                'success' => true,
+                'message' => 'User Deleted Successfully!',
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed!',
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+    
+    
+
     public function updateApprovalStatus(Request $request){
         $req = Validator::make($request->all(), [
             'id' => 'required',
