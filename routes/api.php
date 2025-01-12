@@ -141,7 +141,7 @@ Route::group(['name'=>'Final Test','middleware' => 'api','prefix' => 'final_test
     Route::post('/all', [FinalTestController::class, 'all']);
     Route::post('/all0', [FinalTestController::class, 'all0']);
     Route::post('/all1', [FinalTestController::class, 'all1']);
-    // Route::post('/upload_certificate', [FinalTestController::class, 'upload_certificate']);
+    Route::post('/upload_certificate/{id}', [FinalTestController::class, 'upload_certificate']);
     Route::post('/training_centers', [FinalTestController::class, 'getTrainingCenters']);
     Route::post('/filter', [FinalTestController::class, 'filterTrainingReport']);
 });

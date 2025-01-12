@@ -183,11 +183,9 @@ class FinalTestController extends Controller
     }
 
 
-    public function upload_certificate(){
+    public function upload_certificate($id){
         try {
-
-            $id = auth::user()->id; 
-
+    
 
             $final_test= FinalTest::where('id', $id)->first(); 
 
