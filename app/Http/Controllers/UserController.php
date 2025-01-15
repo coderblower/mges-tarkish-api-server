@@ -497,7 +497,7 @@ Web link: MGES.GLOBAL';
        $startTime = microtime(true);
 
 
-        Log::info('message', ['request' => $request->all()]);
+
 
         // Base query with required relationships and specific fields
         $query = User::select('id', 'created_by', 'email', 'phone', 'name')
@@ -540,6 +540,16 @@ Web link: MGES.GLOBAL';
         if ($request->filled('agent')) {
             $query->whereHas('createdBy', function ($q) use ($request) {
                 $q->where('name', $request->agent);
+            });
+        }
+
+        if ($request->filled('designation')) {
+            $query->whereExists(function ($q) use ($request) {
+                $q->select(DB::raw(1))
+                  ->from('candidates')
+                  ->join('designations', 'candidates.designation_id', '=', 'designations.id')
+                  ->whereColumn('candidates.user_id', 'users.id')
+                  ->where('designations.name', $request->designation);
             });
         }
 
@@ -593,7 +603,7 @@ Web link: MGES.GLOBAL';
 
 
         // If not exporting, continue with pagination and JSON response
-        $perPage = auth()->user()->role_id == 1 || auth()->user()->role_id == 3 ? 10 : 5;
+        $perPage = auth()->user()->role_id == 1 || auth()->user()->role_id == 3 || auth()->user()->role_id == 6  ? 10 : 5;
         $results = $query->orderBy('updated_at', 'desc')->paginate($perPage);
 
         // Measure execution time
