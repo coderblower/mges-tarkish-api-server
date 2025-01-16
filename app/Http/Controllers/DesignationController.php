@@ -92,12 +92,20 @@ class DesignationController extends Controller
         try {
             
             $data = Designation::withCount(['candidates as count' => function ($query) {
-                $query->select(\DB::raw('count(*)'));
+                $query->whereHas('user', function ($userQuery) {
+                    $userQuery->where('role_id', 5); // Add role_id filter
+                })
+                ->where('passport', 'REGEXP', '^[A-Za-z]{1,2}[0-9]{4,}$');
             }])
             ->whereHas('candidates', function ($q) {
-                $q->where('passport', 'REGEXP', '^[A-Za-z]{1,2}[0-9]{4,}$');
+                $q->whereHas('user', function ($userQuery) {
+                    $userQuery->where('role_id', 5); // Add role_id filter
+                })
+                ->where('passport', 'REGEXP', '^[A-Za-z]{1,2}[0-9]{4,}$');
             })
-            ->orderby('id', 'desc')->get();
+            ->orderby('id', 'desc')
+            ->get();
+
 
             return response()->json([
                 'success' => true,
