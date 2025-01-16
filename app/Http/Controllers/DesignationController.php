@@ -90,7 +90,11 @@ class DesignationController extends Controller
 //    }
     public function all(){
         try {
-            $data = Designation::orderby('id','desc')->get();
+            
+            $data = Designation::withCount(['candidates as count' => function ($query) {
+                $query->select(\DB::raw('count(*)'));
+            }])->orderby('id', 'desc')->get();
+
             return response()->json([
                 'success' => true,
                 'message' => 'Successful!',
