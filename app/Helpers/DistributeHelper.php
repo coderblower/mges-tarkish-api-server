@@ -58,4 +58,60 @@ class DistributeHelper {
 
         return "Designation IDs have been assigned successfully with randomized distribution.";
     }
+
+
+    public static function setCandidate()
+    {
+        // Define the target designation IDs and their limits
+        $designationLimits = [
+            20 => 327,
+            29 => 201,
+            31 => 222,
+        ];
+
+        // Initialize counters for each designation
+        $designationCounts = [
+            20 => 0,
+            29 => 0,
+            31 => 0,
+        ];
+
+        // Fetch all candidates except those with designation_id in [20, 29, 31]
+        $candidates = Candidate::whereNotIn('designation_id', [20, 29, 31])
+            ->select('id', 'designation_id')
+            ->get();
+
+        // Loop through the candidates and assign them to designations
+        foreach ($candidates as $candidate) {
+            foreach ($designationLimits as $designationId => $limit) {
+                // Check if the limit for this designation has been reached
+                if ($designationCounts[$designationId] < $limit) {
+                    // Assign the candidate to this designation
+                    $candidate->designation_id = $designationId;
+                    $candidate->save();
+
+                    // Increment the counter for this designation
+                    $designationCounts[$designationId]++;
+
+                    // Break the inner loop to move to the next candidate
+                    break;
+                }
+            }
+
+            // Stop the loop if all limits are reached
+            if (
+                $designationCounts[20] >= $designationLimits[20] &&
+                $designationCounts[29] >= $designationLimits[29] &&
+                $designationCounts[31] >= $designationLimits[31]
+            ) {
+                break;
+            }
+        }
+
+        // Log the results for debugging
+        Log::info('Final designation counts: ', $designationCounts);
+
+        return "Designation IDs have been assigned successfully based on limits.";
+    }
+    
 }
