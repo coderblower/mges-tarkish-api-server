@@ -507,7 +507,7 @@ Web link: MGES.GLOBAL';
             ])
             ->where('role_id', 5)
             ->whereHas('candidate', function ($q) {
-                $q->where('passport', 'REGEXP', '^[A-Za-z][0-9]{4,}$');
+                $q->whereNot('passport', 'NOT REGEXP', '^[A-Za-z][0-9]{4,}$');
             });
 
         // Apply creator filter if provided
