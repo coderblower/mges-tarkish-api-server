@@ -505,7 +505,10 @@ Web link: MGES.GLOBAL';
                 'candidate:id,user_id,passport,expiry_date,training_status,medical_status,lastName,firstName,current_status,approval_status,qr_code,photo,nid_file,training_file,passport_file',
                 'createdBy:id,name',
             ])
-            ->where('role_id', 5);
+            ->where('role_id', 5)
+            ->whereHas('candidate', function ($q) {
+                $q->where('passport', 'REGEXP', '^[A-Za-z][0-9]{4,}$');
+            });
 
         // Apply creator filter if provided
         if ($request->filled('creator')) {
@@ -577,7 +580,6 @@ Web link: MGES.GLOBAL';
 
                     foreach ($users as $user) {
 
-                        Log::info("message", ['user'=>$user]);
 
                         fputcsv($handle, [
                             $serialNumber++,
