@@ -591,9 +591,9 @@ Web link: MGES.GLOBAL';
                             $user->candidate?->passport ?? null,
                             $user->createdBy?->name ?? null,
                             $user->candidate?->training_status ?? null,
-                            $user->medicalTests,
+                            $medicalTests,
                             $user->candidate?->expiry_date ?? null,
-                            !in_array($user->candidate?->current_status, ["Medically Fit", "Medically Unfit"]) ? "-" : $user->candidate?->current_status // Removed the semicolon
+                            $user->phone,
                         ]);
                         
                     }
