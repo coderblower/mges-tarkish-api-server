@@ -504,7 +504,7 @@ Web link: MGES.GLOBAL';
             ->with([
                 'candidate:id,user_id,passport,expiry_date,training_status,medical_status,lastName,firstName,current_status,approval_status,qr_code,photo,nid_file,training_file,passport_file',
                 'createdBy:id,name',
-                'candidateMedicalTests:result'
+                'candidateMedicalTests:result,user_id'
             ])
             ->where('role_id', 5)
             ->whereHas('candidate', function ($q) {
@@ -581,6 +581,8 @@ Web link: MGES.GLOBAL';
 
                     foreach ($users as $user) {
 
+                        $medicalTests = $user->candidateMedicalTests->pluck('result')->implode(', ') ?? null;
+
 
                         fputcsv($handle, [
                             $serialNumber++,
@@ -589,7 +591,7 @@ Web link: MGES.GLOBAL';
                             $user->candidate?->passport ?? null,
                             $user->createdBy?->name ?? null,
                             $user->candidate?->training_status ?? null,
-                            $user->candidateMedicalTests?->result ?? null,
+                            $user->medicalTests,
                             $user->candidate?->expiry_date ?? null,
                             !in_array($user->candidate?->current_status, ["Medically Fit", "Medically Unfit"]) ? "-" : $user->candidate?->current_status // Removed the semicolon
                         ]);
