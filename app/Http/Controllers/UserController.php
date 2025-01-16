@@ -569,7 +569,7 @@ Web link: MGES.GLOBAL';
                 // Write CSV header
                 fputcsv($handle, [
                     'SL', 'First Name', 'Last Name', 'Passport', 'Created By',
-                    'Training Status', 'Medical Status', 'Passport Expiry Date'
+                    'Training Status', 'Medical Status', 'Passport Expiry Date', 'phone'
                 ]);
 
                 // Fetch data and write each row to the CSV
@@ -588,6 +588,7 @@ Web link: MGES.GLOBAL';
                             $user->candidate?->training_status ?? null,
                             $user->candidate?->medical_status ?? null,
                             $user->candidate?->expiry_date ?? null,
+                            $user->phone
                         ]);
                     }
                 });
