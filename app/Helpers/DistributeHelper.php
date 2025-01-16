@@ -164,5 +164,56 @@ class DistributeHelper {
         // Randomly assign a designation from available options (you can modify this logic if needed)
         return $availableDesignations->random()->id;
     }
+
+    public static function fix(){
+        // Fetch all candidates except those with designation_id 20, 29, or 31
+        $candidates = Candidate::whereNotIn('designation_id', [20, 29, 31])->get();
+        
+        // Fetch the existing number of candidates for designations 20, 29, 31
+        $designationLimits = [
+            20 => 327,
+            29 => 201,
+            31 => 222,
+        ];
+
+        // Fetch designations
+        $designations = Designation::whereIn('id', [20, 29, 31])->get();
+        
+        // Initialize an array for distributing candidates
+        $distribution = [
+            20 => 0,
+            29 => 0,
+            31 => 0,
+        ];
+
+        // Loop through each of the designations 20, 29, and 31
+        foreach ($designations as $designation) {
+            // Fetch the current count of candidates for this designation
+            $currentCount = Candidate::where('designation_id', $designation->id)->count();
+            
+            // Calculate how many candidates we can still assign to this designation
+            $availableSpace = $designationLimits[$designation->id] - $currentCount;
+
+            // Log the available space for the designation
+            Log::info('Available space for designation ' . $designation->id . ': ' . $availableSpace);
+
+            // Assign candidates to the current designation until the limit is reached
+            if ($availableSpace > 0) {
+                $batch = $candidates->splice(0, $availableSpace); // Get the available candidates
+                foreach ($batch as $candidate) {
+                    $candidate->designation_id = $designation->id;
+                    $candidate->save();
+                    $distribution[$designation->id]++;
+                }
+            }
+        }
+
+        // After assigning, if any candidates remain, stop the loop
+        if ($candidates->isNotEmpty()) {
+            Log::info('Remaining candidates not assigned: ' . $candidates->count());
+        }
+
+        return "Designations have been assigned successfully with adjustments.";
+    }
     
 }
