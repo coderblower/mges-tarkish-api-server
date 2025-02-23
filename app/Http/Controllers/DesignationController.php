@@ -90,7 +90,23 @@ class DesignationController extends Controller
 //    }
     public function all(){
         try {
-            $data = Designation::orderby('id','desc')->get();
+            
+            $data = Designation::withCount(['candidates as count' => function ($query) {
+                $query->whereHas('user', function ($userQuery) {
+                    $userQuery->where('role_id', 5); // Add role_id filter
+                })
+                ->where('passport', 'REGEXP', '^[A-Za-z]{1,2}[0-9]{4,}$');
+            }])
+            ->whereHas('candidates', function ($q) {
+                $q->whereHas('user', function ($userQuery) {
+                    $userQuery->where('role_id', 5); // Add role_id filter
+                })
+                ->where('passport', 'REGEXP', '^[A-Za-z]{1,2}[0-9]{4,}$');
+            })
+            ->orderby('id', 'desc')
+            ->get();
+
+
             return response()->json([
                 'success' => true,
                 'message' => 'Successful!',

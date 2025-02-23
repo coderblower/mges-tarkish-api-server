@@ -31,6 +31,7 @@ class CandidateMedicalTestController extends Controller
 //            }
             $can = CandidateMedicalTest::where('user_id',$request->user_id)->first();
             $userr = User::where('unique_id',$request->unique_id)->first();
+            $candidate = Candidate::where('user_id', $request->user_id)->first();
             $partner = Partner::where('user_id',auth()->user()->id)->first();
             $quota_used = $partner->quota_used;
             if ($userr){
@@ -57,6 +58,8 @@ class CandidateMedicalTestController extends Controller
                     $data->note = $request->note;
 //            $data->report = $request->report;
                     if ($partner->quota >=1){
+                        $candidate->medical_center_id = auth()->user()->id;
+                        $candidate->update();
                         $data->save();
                         $partner->quota_used = $quota_used + 1;
                         $partner->update();
@@ -284,23 +287,36 @@ class CandidateMedicalTestController extends Controller
                     $count = $query->count();
                 }else{
                     $query = CandidateMedicalTest::with('user')
-                        ->when($request->agent_id != '', function($query) use ($request)
-                        { $query->whereHas('user', function ($query) use ($request) {
-                            $query->where('created_by', $request->agent_id);});})
-                        ->when($request->user_id != '', function($query) use ($request) { $query->where('enrolled_by', $request->user_id);})
-                        ->when($request->result != '', function($query) use ($request) { $query->where('result', $request->result);})
-                        ->with('enrolledBy')
-                        ->with('country')
-                        ->with(['candidate'=> function ($query) {
-                            $query->select('designation_id', 'id', 'user_id', 'passport', 'photo', 'qr_code', 'firstName', 'lastName' );
-                        }])
-                        ->when($request->passport != '', function($query) use ($request)
-                        { $query->whereHas('candidate', function ($query) use ($request) {
-                            $query->where('passport', 'like', "%$request->passport%");});})
-                        ->with('user.createdby')
-                        ->orderBy('id','desc')
-                        ->paginate(20);
-                    $count = $query->count();
+                    ->when($request->agent_id != '', function ($query) use ($request) {
+                        $query->whereHas('user', function ($query) use ($request) {
+                            $query->where('created_by', $request->agent_id);
+                        });
+                    })
+                    ->when($request->user_id != '', function ($query) use ($request) {
+                        $query->where('enrolled_by', $request->user_id);
+                    })
+                    ->when($request->result != '', function ($query) use ($request) {
+                        $query->where('result', $request->result);
+                    })
+                    ->when($request->country != '', function ($query) use ($request) {
+                        $query->where('country_id', $request->country); // Adjust 'country_id' if the column name is different
+                    })
+                    ->with('enrolledBy')
+                    ->with('country')
+                    ->with(['candidate' => function ($query) {
+                        $query->select('designation_id', 'id', 'user_id', 'passport', 'photo', 'qr_code', 'firstName', 'lastName');
+                    }])
+                    ->when($request->passport != '', function ($query) use ($request) {
+                        $query->whereHas('candidate', function ($query) use ($request) {
+                            $query->where('passport', 'like', "%$request->passport%");
+                        });
+                    })
+                    ->with('user.createdby')
+                    ->orderBy('id', 'desc')
+                    ->paginate(20);
+                
+                $count = $query->count();
+                
                 }
             }else{
                 if ($request->pg == '') {

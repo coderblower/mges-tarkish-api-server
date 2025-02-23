@@ -8,6 +8,7 @@ use App\Models\SkillTest;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
 
 class FinalTestController extends Controller
 {
@@ -181,6 +182,43 @@ class FinalTestController extends Controller
             ]);
         }
     }
+
+
+    public function upload_certificate( Request $request,  $id){
+        try {
+    
+
+            $final_test= FinalTest::where('id', $id)->first(); 
+            Log::info("message".$final_test."id".$id);
+
+            $final_test->certificate_upload = $request->certificate_upload ? $this->get_final_test_certificate_name($request) : null;
+
+            $final_test->save();
+
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Successful!',
+                'data' => $final_test,
+            ]);
+        }catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'failed!',
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    public function get_final_test_certificate_name($request)
+    {
+        $image = $request->file('certificate_upload');
+        $imageName = time() . $image->getClientOriginalName();
+        $path = 'candidate_photos/';
+        $image->move($path, $imageName);
+        return $path.$imageName;
+    }
+    
     public function filterTrainingReport(Request $request){
         try {
             if (auth()->user()->role_id == 1){

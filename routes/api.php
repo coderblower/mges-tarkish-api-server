@@ -1,9 +1,11 @@
 <?php
 
+use App\Http\Controllers\ApiNotificationController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CandidateController;
 use App\Http\Controllers\CandidateMedicalTestController;
 use App\Http\Controllers\CandidateSkillTestController;
+use App\Http\Controllers\CommonController;
 use App\Http\Controllers\CountryController;
 use App\Http\Controllers\DesignationController;
 use App\Http\Controllers\FinalTestController;
@@ -100,6 +102,8 @@ Route::group(['name'=>'Candidate','middleware' => 'api','prefix' => 'candidate']
     Route::post('/get_candidate_by_id', [CandidateController::class, 'getCandidateById']);
     Route::post('/candidate_qr_save', [CandidateController::class, 'saveQr']);
     Route::post('/delete_file/{id}', [CandidateController::class, 'deleteFile']);
+    Route::get('/get_qr/{id}', [CandidateController::class, 'get_qr']);
+    Route::post('/delete_user/{id}', [CandidateController::class, 'deleteUser']);
 });
 Route::group(['name'=>'Payment','middleware' => 'api','prefix' => 'payment'], function () {
     Route::get('/payments', [PaymentController::class, 'index']);
@@ -138,6 +142,7 @@ Route::group(['name'=>'Final Test','middleware' => 'api','prefix' => 'final_test
     Route::post('/all', [FinalTestController::class, 'all']);
     Route::post('/all0', [FinalTestController::class, 'all0']);
     Route::post('/all1', [FinalTestController::class, 'all1']);
+    Route::post('/upload_certificate/{id}', [FinalTestController::class, 'upload_certificate']);
     Route::post('/training_centers', [FinalTestController::class, 'getTrainingCenters']);
     Route::post('/filter', [FinalTestController::class, 'filterTrainingReport']);
 });
@@ -167,13 +172,32 @@ Route::group(['name'=>'Country','middleware' => 'api','prefix' => 'country'], fu
     Route::post('/update', [CountryController::class, 'update']);
     Route::post('/destroy', [CountryController::class, 'destroy']);
     Route::post('/all', [CountryController::class, 'all']);
+    Route::post('/get_file', [CommonController::class, 'downloadFile']);
 });
+
+
 Route::group(['name'=>'Designation','middleware' => 'api','prefix' => 'designation'], function () {
     Route::post('/create', [DesignationController::class, 'create']);
 //    Route::post('/update', [CountryController::class, 'update']);
 //    Route::post('/destroy', [CountryController::class, 'destroy']);
     Route::post('/all', [DesignationController::class, 'all']);
 });
+
+
+Route::group(['name'=>'Notification','middleware' => 'api','prefix' => 'notification'], function () {
+    
+//    Route::post('/update', [CountryController::class, 'update']);
+//    Route::post('/destroy', [CountryController::class, 'destroy']);
+    Route::post('/get_notification', [ApiNotificationController::class, 'getNotification']);
+    
+});
+
+
+
+
+
+
+
 
 //Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 //    return $request->user();

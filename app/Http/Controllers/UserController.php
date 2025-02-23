@@ -88,6 +88,12 @@ class UserController extends Controller
             ]);
 
         } catch (\Exception $e) {
+            if (isset($user)) {
+                $user->delete();
+            }
+            if (isset($candidate)) {
+                $candidate->delete();
+            }
             return response()->json([
                 'success' => false,
                 'message' => 'Error occurred during user creation!',
@@ -144,7 +150,12 @@ class UserController extends Controller
             $candidate->experience_file = $request->experience_file ? $this->getExpUrl($request) : null;
             $candidate->academic_file = $request->academic_file ? $this->getAcademicUrl($request) : null;
             $candidate->training_file = $request->training_file ? $this->getTrainingUrl($request) : null;
+            $candidate->passport_all_page = $request->passport_all_page ? $this->getPassportAllPageUrl($request) : null;
+            $candidate->cv = $request->cv ? $this->getCvUrl($request) : null;
+            $candidate->resume = $request->resume ? $this->getResumeUrl($request) : null;
+            $candidate->birth_certificate = $request->birth_certificate ? $this->getBirthCertificate($request) : null;
             $candidate->qr_code = $this->getQRUrl($userId);
+            $candidate->verified_certificated = $request->verified_certificated||false;
 
             // If the user is an admin, automatically approve
             if (auth()->user()->role_id == 1) {
@@ -275,7 +286,7 @@ class UserController extends Controller
     }
     public function getUser(Request $request){
         try {
-            $data = User::with('role')->with('candidate')->with('partner')->with('candidate.designation')->with('report')->with('preskilled')->with('skill')->where('id',$request->id)->first();
+            $data = User::with('role')->with(['candidate', 'candidate.country'])->with('partner')->with('candidate.designation')->with('report')->with('preskilled')->with('skill')->where('id',$request->id)->first();
             return response()->json([
                 'success' => true,
                 'message' => 'Successful!',
@@ -491,12 +502,16 @@ Web link: MGES.GLOBAL';
 
 
         // Base query with required relationships and specific fields
-        $query = User::select('id', 'created_by')
+        $query = User::select('id', 'created_by', 'email', 'phone', 'name')
             ->with([
-                'candidate:id,user_id,passport,expiry_date,training_status,medical_status,lastName,firstName,current_status,approval_status,qr_code,photo',
+                'candidate:id,user_id,passport,expiry_date,training_status,medical_status,lastName,firstName,current_status,approval_status,qr_code,photo,nid_file,training_file,passport_file',
                 'createdBy:id,name',
+                'candidateMedicalTests:result,user_id'
             ])
-            ->where('role_id', 5);
+            ->where('role_id', 5)
+            ->whereHas('candidate', function ($q) {
+                $q->where('passport', 'REGEXP', '^[A-Za-z]{1,2}[0-9]{4,}$');
+            });
 
         // Apply creator filter if provided
         if ($request->filled('creator')) {
@@ -531,6 +546,16 @@ Web link: MGES.GLOBAL';
             $query->where('users.created_by', $request->agent);
         }
 
+        if ($request->filled('designation')) {
+            $query->whereExists(function ($q) use ($request) {
+                $q->select(DB::raw(1))
+                  ->from('candidates')
+                  ->join('designations', 'candidates.designation_id', '=', 'designations.id')
+                  ->whereColumn('candidates.user_id', 'users.id')
+                  ->where('designations.name', $request->designation);
+            });
+        }
+
 
 
 
@@ -548,7 +573,7 @@ Web link: MGES.GLOBAL';
                 // Write CSV header
                 fputcsv($handle, [
                     'SL', 'First Name', 'Last Name', 'Passport', 'Created By',
-                    'Training Status', 'Medical Status', 'Passport Expiry Date'
+                    'Training Status', 'Medical Status', 'Passport Expiry Date', 'phone',
                 ]);
 
                 // Fetch data and write each row to the CSV
@@ -556,7 +581,8 @@ Web link: MGES.GLOBAL';
 
                     foreach ($users as $user) {
 
-                        Log::info("message", ['user'=>$user]);
+                        $medicalTests = $user->candidateMedicalTests->pluck('result')->implode(', ') ?? null;
+
 
                         fputcsv($handle, [
                             $serialNumber++,
@@ -565,9 +591,11 @@ Web link: MGES.GLOBAL';
                             $user->candidate?->passport ?? null,
                             $user->createdBy?->name ?? null,
                             $user->candidate?->training_status ?? null,
-                            $user->candidate?->medical_status ?? null,
+                            $medicalTests,
                             $user->candidate?->expiry_date ?? null,
+                            $user->phone,
                         ]);
+                        
                     }
                 });
 
@@ -582,12 +610,14 @@ Web link: MGES.GLOBAL';
 
 
         // If not exporting, continue with pagination and JSON response
-        $perPage = auth()->user()->role_id == 1 || auth()->user()->role_id == 3 ? 10 : 5;
+        $perPage = auth()->user()->role_id == 1 || auth()->user()->role_id == 3 || auth()->user()->role_id == 6  ? 10 : 5;
         $results = $query->orderBy('updated_at', 'desc')->paginate($perPage);
 
         // Measure execution time
         $endTime = microtime(true);
         $queryTime = round(($endTime - $startTime), 2);
+
+        Log::info('data', ['data' => $results]);
 
         return response()->json([
             'data' => $results,
@@ -741,4 +771,45 @@ public function getVerifiedCertificateUrl($request)
         $image->move($path, $imageName);
         return $path.$imageName;
     }
+
+
+
+    public function getBirthCertificate($request)
+    {
+        $image = $request->file('birth_certificate');
+        $imageName = time() . $image->getClientOriginalName();
+        $path = 'candidate_photos/';
+        $image->move($path, $imageName);
+        return $path.$imageName;
+    }
+
+
+    public function getCvUrl($request)
+    {
+        $image = $request->file('cv');
+        $imageName = time() . $image->getClientOriginalName();
+        $path = 'candidate_photos/';
+        $image->move($path, $imageName);
+        return $path.$imageName;
+    }
+
+    public function getResumeUrl($request)
+    {
+        $image = $request->file('resume');
+        $imageName = time() . $image->getClientOriginalName();
+        $path = 'candidate_photos/';
+        $image->move($path, $imageName);
+        return $path.$imageName;
+    }
+
+    public function getPassportAllPageUrl($request)
+    {
+        $image = $request->file('passport_all_page');
+        $imageName = time() . $image->getClientOriginalName();
+        $path = 'candidate_photos/';
+        $image->move($path, $imageName);
+        return $path.$imageName;
+    }
+
+
 }

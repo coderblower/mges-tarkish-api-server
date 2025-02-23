@@ -6,13 +6,21 @@ use App\Models\Candidate;
 use App\Models\CandidateMedicalTest;
 use App\Models\Quota;
 use App\Models\User;
-use http\Env\Response;
+use App\Notifications\UserDeletedNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use function League\Flysystem\move;
+
+use PDF;
+
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Response;
+
+
 
 class CandidateController extends Controller
 {
@@ -152,6 +160,52 @@ class CandidateController extends Controller
             ]);
         }
     }
+
+    public function deleteUser(Request $request, $id)
+    {
+        
+        try {
+
+            // Eager load the 'createdby' relationship to get the user who created the current user
+            $data = User::with('createdby', 'candidate')->find($id);  // Find the user and load their creator
+            $can = Candidate::where('user_id', $id)->first();  // Find the candidate by user_id
+    
+    
+              
+    
+            // Check and delete associated files for the candidate
+            if ($can) {
+                foreach (['pif_file', 'passport_all_page', 'birth_certificate', 'resume', 'cv', 'nid_file', 'photo', 'experience_file', 'academic_file', 'passport_file', 'training_file'] as $fileType) {
+                    $file = $can->$fileType;
+                    if ($file && file_exists($file)) {
+                        
+                        unlink($file);  // Delete the file
+                    }
+                }
+    
+                $can->forceDelete();  // Force delete the candidate record
+            }
+    
+            if ($data) {
+                $data->forceDelete();  // Force delete the user record
+            }
+
+            User::find($data->createdby->id)->notify( new UserDeletedNotification($data, $request->note)); 
+    
+            return response()->json([
+                'success' => true,
+                'message' => 'User Deleted Successfully!',
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed!',
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+    
+
     public function updateApprovalStatus(Request $request){
         $req = Validator::make($request->all(), [
             'id' => 'required',
@@ -188,12 +242,7 @@ class CandidateController extends Controller
                 return response()->json($req->errors(), 422);
             }
             $data = Candidate::where('id', $request->id)->first();
-            $image = $data->photo?$data->photo: null;
-            $passport_file = $data->passport_file?$data->passport_file:null;
-            $nid_file = $data->nid_file?$data->nid_file:null;
-            $academic_file = $data->academic_file?$data->academic_file: Null;
-            $experience_file = $data->experience_file?$data->experience_file: null;
-            $training_file = $data->training_file?$data->training_file:null;
+          
             $qr = $data->qr_code;
             $data->gender = $request->gender;
             $data->marital_status = $request->marital_status;
@@ -238,70 +287,33 @@ class CandidateController extends Controller
 //            $data->medical_status = $request->medical_status;
 //            $data->training_status = $request->training_status;
             $data->is_active = $request->is_active;
-            if($request->file('nid_file')) {
-                if (file_exists($nid_file)) {
-                    unlink($nid_file);
-                }
-                $this->nidUrl = $this->getNidUrl($request);
+            
+            
+
+
+
+            foreach (['pif_file', 'passport_all_page', 'birth_certificate', 'resume', 'cv', 'nid_file', 'photo', 'experience_file', 'academic_file', 'passport_file', 'training_file' ] as $fileType) {
+                $data->$fileType = $this->reset_file_link($request->file($fileType), $data->$fileType);
             }
-            else {
-                $this->nidUrl = $nid_file;
+            
+            // Update the data in the database
+            $data->update();
+
+
+
+
+
+
+           
+
+            // Check if the file exists before deleting
+            if (file_exists($qr)) {
+                unlink($qr); // Delete the existing file
             }
-            $data->nid_file = $this->nidUrl;
-            if($request->file('photo')) {
-                if (file_exists($image)) {
-                    unlink($image);
-                }
-                $this->imageUrl = $this->getImageUrl($request);
-            }
-            else {
-                $this->imageUrl = $image;
-            }
-            $data->photo = $this->imageUrl;
-            if($request->file('passport_file')) {
-                if (file_exists($passport_file)) {
-                    unlink($passport_file);
-                }
-                $this->passportUrl = $this->getPassportUrl($request);
-            }
-            else {
-                $this->passportUrl = $passport_file;
-            }
-            $data->passport_file = $this->passportUrl;
-            if($request->file('experience_file')) {
-                if (file_exists($experience_file)) {
-                    unlink($experience_file);
-                }
-                $this->expUrl = $this->getExpUrl($request);
-            }
-            else {
-                $this->expUrl = $experience_file;
-            }
-            $data->experience_file = $this->expUrl;
-            if($request->file('academic_file')) {
-                if (file_exists($academic_file)) {
-                    unlink($academic_file);
-                }
-                $this->academicUrl = $this->getAcademicUrl($request);
-            }
-            else {
-                $this->academicUrl = $academic_file;
-            }
-            $data->academic_file = $this->academicUrl;
-            if($request->file('training_file')) {
-                if (file_exists($training_file)) {
-                    unlink($training_file);
-                }
-                $this->trainingUrl = $this->getTrainingUrl($request);
-            }
-            else {
-                $this->trainingUrl = $training_file;
-            }
-            $data->training_file = $this->trainingUrl;
-//            if (file_exists($qr)) {
-//                unlink($qr);
-//            }
+
+            // Generate the new QR file URL
             $data->qr_code = $this->getQRUrl($request);
+
             $data->update();
 //            $user = User::where('id', $data->user_id)->first();
 //            $pass = $data->password;
@@ -321,6 +333,7 @@ class CandidateController extends Controller
             ]);
         }
     }
+
     public function destroy(Request $request){
         try {
             $data = Candidate::where('id', $request->id)->first();
@@ -346,18 +359,100 @@ class CandidateController extends Controller
         }
     }
     public function all(Request $request){
+
         try {
-            if ($request->pg == ''){
-                $data = User::orderby('id', 'desc')->where('role_id', 5)
-                    ->with('candidate')
-                    ->with('partner')->with('createdBy')->with('candidate.designation')->with('role')->get();
-                $dataC = User::where('role_id', 5)->count();
-            }else{
-                $data = User::orderby('id', 'desc')->where('role_id', 5)
-                    ->with('candidate')
-                    ->with('partner')->with('createdBy')->doesntHave('report')->with('role')->paginate(10);
-                $dataC = User::where('role_id', 5)->doesntHave('report')->count();
+            $query = User::orderby('id', 'desc')
+                ->where('role_id', 5)
+                ->with('candidate')
+                ->when($request->has('approval_status'), function ($query) use ($request) {
+                    return $query->whereHas('candidate', function ($q) use ($request) {
+                        $q->where('approval_status', $request->approval_status);
+                    });
+                })
+                ->with('partner')
+                ->with('createdBy')
+                ->with('candidate.designation')
+                ->with('role');
+
+            // Apply the `doesntHave('report')` condition only if `$request->pg` is not empty
+            if ($request->pg != '') {
+                $query->doesntHave('report');
             }
+
+            // Fetch data (either paginated or all records)
+
+
+
+            if ($request->filled('agent')) {
+                $query->whereHas('createdBy', function ($q) use ($request) {
+                    $q->where('name', $request->agent);
+                });
+            }
+            if ($request->filled('country')) {
+                $query->whereExists(function ($q) use ($request) {
+                    $q->select(DB::raw(1))
+                      ->from('candidates')
+                      ->whereColumn('candidates.user_id', 'users.id')
+                      ->where('country', $request->country);
+                });
+            }
+
+
+
+               // Export all data as CSV if requested
+        if ($request->filled('export_all') && $request->export_all == true) {
+
+
+
+            $filename = "candidates_export_" . now()->format('Y_m_d_H_i_s') . ".csv";
+
+            $serialNumber = 1;
+
+
+            // Create a StreamedResponse to write CSV data
+            $response = Response::stream(function () use ($query, &$serialNumber) {
+                ob_end_clean(); // Clear any previous output
+                $handle = fopen('php://output', 'w');
+
+                // Write CSV header
+                fputcsv($handle, [
+                    'SL', 'Name',  'Passport', 'Created By',
+                    'Training Status', 'Medical Status', 'Passport Expiry Date'
+                ]);
+
+                // Fetch data and write each row to the CSV
+                $query->chunk(100, function ($users) use ($handle, &$serialNumber) {
+
+                    foreach ($users as $user) {
+
+
+
+                        fputcsv($handle, [
+                            $serialNumber++,
+                            $user->name,
+                            $user->candidate?->passport ?? null,
+                            $user->createdBy?->name ?? null,
+                            $user->candidate?->training_status ?? null,
+                            $user->candidate?->medical_status ?? null,
+                            $user->candidate?->expiry_date ?? null,
+                        ]);
+                    }
+                });
+
+                fclose($handle);
+            }, 200, [
+                "Content-Type" => "text/csv",
+                "Content-Disposition" => "attachment; filename=$filename",
+            ]);
+
+            return $response;
+        }
+
+        $data = $request->pg == '' ? $query->get() : $query->paginate(10);
+
+            // Count total records by cloning the query without fetching all relationships
+            $dataC = (clone $query)->count();
+
             return response()->json([
                 'success' => true,
                 'message' => 'Successful!',
@@ -678,6 +773,47 @@ class CandidateController extends Controller
             ]);
         }
     }
+
+
+    public function getBirthCertificate($request)
+    {
+        $image = $request->file('birth_certificate');
+        $imageName = time() . $image->getClientOriginalName();
+        $path = 'candidate_photos/';
+        $image->move($path, $imageName);
+        return $path.$imageName;
+    }
+
+
+    public function getCvUrl($request)
+    {
+        $image = $request->file('cv');
+        $imageName = time() . $image->getClientOriginalName();
+        $path = 'candidate_photos/';
+        $image->move($path, $imageName);
+        return $path.$imageName;
+    }
+
+    public function getResumeUrl($request)
+    {
+        $image = $request->file('resume');
+        $imageName = time() . $image->getClientOriginalName();
+        $path = 'candidate_photos/';
+        $image->move($path, $imageName);
+        return $path.$imageName;
+    }
+
+    public function getPassportAllPageUrl($request)
+    {
+        $image = $request->file('passport_all_page');
+        $imageName = time() . $image->getClientOriginalName();
+        $path = 'candidate_photos/';
+        $image->move($path, $imageName);
+        return $path.$imageName;
+    }
+
+
+
     public function saveQr(Request $request)
     {
         try {
@@ -741,4 +877,93 @@ class CandidateController extends Controller
 
         return response()->json(['message' => 'File deletion recorded successfully.']);
     }
+
+    public function get_qr(Request $request, $id)
+{
+    $data = Candidate::where('user_id', $id)->first();
+
+    if (!$data || !$data->qr_code) {
+        return response()->json(['message' => 'QR code not found'], 404);
+    }
+
+    $qrPath = public_path($data->qr_code);
+    $logo = public_path("logo.png");
+     // Path to the QR code image
+
+    // Check if the QR code image exists
+    if (!file_exists($qrPath)) {
+        return response()->json(['message' => 'QR code file not found'], 404);
+    }
+
+    // Convert the image to a base64 blob
+    function convertToImage($qrPath){
+        $imageData = base64_encode(file_get_contents($qrPath));
+        $base64Image = 'data:image/png;base64,' . $imageData;
+        return $base64Image;
+    }
+
+    // Embed the image in the HTML
+// Embed the image in the HTML
+$html = '<html>
+            <body>
+                <div style="text-align: center;">
+                <span><img src="' . convertToImage($logo) . '" style="width: 100px; height: 60px;" alt="QR Code">
+                    <h2>MGES GLOBAL </h2></span>
+                    <p>Name: ' . $data->firstName . ' ' . $data->lastName . '</p>
+                    <p>Passport: ' . $data->passport . '</p>
+                    <h2> QR Code</h2>
+                    <img src="' . convertToImage($qrPath) . '" style="width: 300px; height: 300px;" alt="QR Code">
+                </div>
+            </body>
+         </html>';
+
+
+    // Create an instance of Dompdf
+    $dompdf = new \Dompdf\Dompdf();
+
+    // Load the HTML content
+    $dompdf->loadHtml($html);
+
+    // Set paper size and orientation
+    $dompdf->setPaper('A4', 'portrait');
+
+    // Render the PDF
+    $dompdf->render();
+
+    // Output the generated PDF for download
+    return response($dompdf->output(), 200)
+        ->header('Content-Type', 'application/pdf')
+        ->header('Content-Disposition', 'attachment; filename="qr_code.pdf"');
+}
+
+
+private function get_url($server_file)
+{
+    $image = $server_file;
+    $imageName = time() . $image->getClientOriginalName();
+    $path = 'candidate_photos/';
+    $image->move($path, $imageName);
+    return $path.$imageName;
+
+
+}
+
+private function reset_file_link($server_file, $file_name)
+{
+    if ($server_file) {
+        // Check and delete the existing file
+        if (file_exists($file_name)) {
+            Log::info('File ', ['file' => $file_name]);
+            unlink($file_name);
+        }
+
+        // Generate and return the new file URL
+        return $this->get_url($server_file);
+    }
+
+    // Return the existing file name if no new file is uploaded
+    return $file_name;
+}
+
+
 }

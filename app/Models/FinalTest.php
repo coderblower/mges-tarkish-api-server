@@ -8,6 +8,13 @@ use Illuminate\Database\Eloquent\Model;
 class FinalTest extends Model
 {
     use HasFactory;
+    protected $fillable = [
+        'user_id',
+        'enrolled_by',
+        'status',
+        'file_path',
+    ];
+    
     public function candidate()
     {
         return $this->belongsTo(Candidate::class, 'user_id', 'user_id');
