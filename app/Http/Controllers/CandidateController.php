@@ -6,6 +6,7 @@ use App\Models\Candidate;
 use App\Models\CandidateMedicalTest;
 use App\Models\Quota;
 use App\Models\User;
+
 use App\Notifications\UserDeletedNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -698,40 +699,29 @@ class CandidateController extends Controller
     public function candidateByCreatorCount(Request $request)
     {
         try {
-            if ($request->has('user_id')){
-                $registered = User::where('created_by', $request->user_id)->where('role_id', 5)->with('report')->with('candidate')->get();
-            }else{
-                $registered = User::where('created_by', auth()->user()->id)->where('role_id', 5)->with('report')->with('candidate')->get();
-            }
-            $count = $registered->count();
-            $med_count = 0;
-            $complete_count = 0;
-            foreach ($registered as $val){
-                if ($val->report){
-                    if ($val->report->result != null){
-                        $med_count += 1;
-                    }
-                }
-                if ($val->candidate){
-                    if ($val->candidate->passport_file != null &&
-                        $val->candidate->nid_file != null &&
-                        $val->candidate->academic_file != null &&
-                        $val->candidate->experience_file != null &&
-                        $val->candidate->training_file != null &&
-                        $val->candidate->photo != null
-                    ){
-                        $complete_count += 1;
-                    }
-                }
-            }
+            $user_id = $request->user_id ?? auth()->id();
+
+            $totalUsersQuery = User::where('created_by', $user_id)->where('role_id', 5);
+
+            $totalUsersCount = $totalUsersQuery->count();
+            $candidatePending = $totalUsersQuery->whereHas('candidate', fn($q) => $q->where('approval_status', 'pending'))->count();
+            $repeat = CandidateMedicalTest::where('enrolled_by', $user_id)->where('max', 1)->count();
+
+            $fitCount = CandidateMedicalTest::whereHas('user', fn($q) => $q->where('role_id', 5)->where('created_by', $user_id))->count();
+            $unfitCount = $totalUsersCount - $fitCount;
+
             return response()->json([
                 'success' => true,
-                'message' => 'Successful!',
-                'count' => $count,
-                'med_count' => $med_count,
-                'complete_count' => $complete_count,
+                'count' => [
+                    'total' => $totalUsersCount,
+                    'fit' => $fitCount,
+                    'unfit' => $unfitCount,
+                    'pending' => $candidatePending,
+                    'repeat' => $repeat,
+                ],
             ]);
-        }catch (\Exception $e) {
+            
+                }catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'failed!',
@@ -739,6 +729,8 @@ class CandidateController extends Controller
             ]);
         }
     }
+
+
     public function getCandidateById(Request $request)
     {
         try {
