@@ -9,6 +9,8 @@ class Designation extends Model
 {
     use HasFactory;
 
+    protected $fillable = ['name']; // Allow mass assignment for 'name'
+
     public function candidates()
     {
         return $this->hasMany(Candidate::class, 'designation_id');

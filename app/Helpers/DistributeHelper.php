@@ -10,54 +10,74 @@ class DistributeHelper {
 
     public static function assignDesignationsToCandidates()
     {
-        // Fetch all candidates and designations
-        $candidates = Candidate::select('id')->get();
-        $designations = Designation::all();
-
-        // Initialize remaining candidates counter
-        $remainingCandidates = $candidates->count();
-
-        // Initialize an array for distributing candidates
-        $distribution = [];
-
-        // Loop through all designations until all candidates are assigned
-        $designationCount = $designations->count();
-        $designationIndex = 0;
-
-        while ($remainingCandidates > 0) {
-            // Randomize the number of candidates to be assigned to the current designation
-            $batchSize = rand(80, 100);
-             
-
-            Log::info('Batch Size: '.$batchSize);
-
-            // Ensure we do not assign more candidates than are left
-            if ($batchSize > $remainingCandidates) {
-                $batchSize = $remainingCandidates;
-            }
-
-            // Assign the batch to the current designation
-            $designation = $designations[$designationIndex];
-            $distribution[$designation->id] = $batchSize;
-
-            // Decrement remaining candidates by the batch size
-            $remainingCandidates -= $batchSize;
-
-            // Move to the next designation, looping back to the first if needed
-            $designationIndex = ($designationIndex + 1) % $designationCount;
+        // Step 1: Reset designations table
+        $designationData = [
+            ['name' => 'Civil QC', 'count' => 10],
+            ['name' => 'Surveyor', 'count' => 15],
+            ['name' => 'Safety Officer', 'count' => 20],
+            ['name' => 'Electrician', 'count' => 200],
+            ['name' => 'Steel Fixer', 'count' => 300],
+            ['name' => 'Carpenter', 'count' => 140],
+            ['name' => 'Mason', 'count' => 110],
+            ['name' => 'Plumber', 'count' => 150],
+            ['name' => 'Pipe Fitter', 'count' => 110],
+            ['name' => 'Painter', 'count' => 120],
+            ['name' => 'Scaffolder', 'count' => 100],
+            ['name' => 'Labor', 'count' => 200],
+            ['name' => 'Cleaner', 'count' => 600],
+        ];
+    
+        // Truncate and reinsert designations
+        Designation::truncate();
+        foreach ($designationData as $data) {
+            Designation::create(['name' => $data['name']]);
         }
-
-        // Assign the distributed candidates to the respective designations
-        foreach ($distribution as $designationId => $count) {
-            $batch = $candidates->splice(0, $count);
+    
+        // Reload with IDs
+        $designations = Designation::all()->keyBy('name');
+    
+        // Step 2: Reset all candidates' designation_id
+        Candidate::query()->update(['designation_id' => null]);
+    
+        // Step 3: Assign HSC candidates
+        $hscDesignations = [
+            'Civil QC' => 10,
+            'Surveyor' => 15,
+            'Safety Officer' => 20,
+        ];
+    
+        $hscCandidates = Candidate::whereIn('academic->level_of_education', ['HSC'])->get();
+    
+        foreach ($hscDesignations as $designationName => $limit) {
+            $designation = $designations[$designationName];
+            $batch = $hscCandidates->splice(0, $limit);
             foreach ($batch as $candidate) {
-                $candidate->designation_id = $designationId;
+                $candidate->designation_id = $designation->id;
                 $candidate->save();
             }
         }
-
-        return "Designation IDs have been assigned successfully with randomized distribution.";
+    
+        // Step 4: Assign remaining designations
+        $remainingCandidates = Candidate::whereNull('designation_id')->get();
+    
+        foreach ($designationData as $data) {
+            // Skip the ones already processed
+            if (array_key_exists($data['name'], $hscDesignations)) {
+                continue;
+            }
+    
+            $designation = $designations[$data['name']];
+            $batch = $remainingCandidates->splice(0, $data['count']);
+    
+            foreach ($batch as $candidate) {
+                $candidate->designation_id = $designation->id;
+                $candidate->save();
+            }
+        }
+    
+        return "Designations have been assigned successfully.";
     }
+    
 
 
     public static function setCandidate()
