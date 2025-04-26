@@ -3,63 +3,47 @@
 namespace App\Helpers;
 
 use App\Models\Candidate;
-use App\Models\Designation;
 use Illuminate\Support\Facades\Log;
-use App\Models\User;
-use Illuminate\Support\Facades\DB;
 
 class TraningHelper {
-    public static function fillTrainingDataForCandidates()
+    public static function updateTrainingTitlesForAllCandidates()
     {
-        // Step 1: Fetch all candidates
+        // Fetch all candidates
         $candidates = Candidate::all();
-    
+
         if ($candidates->isEmpty()) {
             return "No candidates found.";
         }
-    
-        // Step 2: Fetch all users with role_id = 2 (training centers)
-        $trainingCenters = User::where('role_id', 2)->get();
-    
-        if ($trainingCenters->isEmpty()) {
-            return "No users found with role_id 2 (training centers).";
-        }
-    
-        // Step 3: Loop through each candidate
+
         foreach ($candidates as $candidate) {
-            // Decode existing training
-            $existingTraining = $candidate->training ? json_decode($candidate->training, true) : null;
-        
-            if (!empty($existingTraining) && empty($existingTraining['training_title'])) {   
-                // Training exists but training_title is missing
-        
-                $trainingData = $existingTraining; // no need to decode again
-        
-                // Safely get designation name
-                $designationName = is_object($candidate->designation) ? ($candidate->designation->name ?? null) : $candidate->designation;
-        
-                // Set the training title based on the candidate's designation
-                $trainingData['training_title'] = self::getTrainingTitleByDesignation($designationName);
-        
-                // Save updated training
-                $candidate->training = json_encode($trainingData);
-                $candidate->save();
+            $trainingData = $candidate->training ? json_decode($candidate->training, true) : [];
+
+            // Safely get designation name
+            $designationName = is_object($candidate->designation) ? ($candidate->designation->name ?? null) : $candidate->designation;
+
+            if (!$designationName) {
+                continue; // Skip if no designation
             }
+
+            // Update only the training_title
+            $trainingData['training_title'] = self::getTrainingTitleByDesignation($designationName);
+
+            // Save the updated training
+            $candidate->training = json_encode($trainingData);
+            $candidate->save();
         }
-    
-        return "Training data updated successfully.";
+
+        return "Training titles updated successfully for all candidates.";
     }
-    
+
     private static function getTrainingTitleByDesignation($designation)
     {
-        // If designation is an object (relationship), get the 'name' field
         $designationName = is_object($designation) ? ($designation->name ?? null) : $designation;
-   
+
         if (!$designationName) {
-            return null;
+            return 'General Training';
         }
-    
-        // Map designations to training titles
+
         $designationToTrainingTitle = [
             'Civil QC' => 'Civil Quality Control Training',
             'Surveyor' => 'Surveying Techniques Training',
@@ -75,9 +59,7 @@ class TraningHelper {
             'Labor' => 'General Labor Skills Training',
             'Cleaner' => 'Cleaning and Maintenance Training',
         ];
-    
-        return $designationToTrainingTitle[$designationName] ?? 'General Training'; // fallback to General Training
-    }
 
-    
+        return $designationToTrainingTitle[$designationName] ?? 'General Training';
+    }
 }
