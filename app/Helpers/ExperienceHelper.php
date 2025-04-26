@@ -35,6 +35,8 @@ class ExperienceHelper {
             'Labor' => 'Labor',
             'Cleaner' => 'Cleaning Services',
         ];
+
+
     
         // Step 2: Fetch all candidates where experience_file is empty
         $candidates = Candidate::all();
@@ -53,7 +55,7 @@ class ExperienceHelper {
                 : 'Employee';  // Fallback if the designation is not found
     
                 log::info("Candidate ID: {$candidate->id}, Designation: {$designationName}");
-                
+
             // Step 4: Map designation to department
             $department = $designationToDepartment[$designationName] ?? 'General Administration';
     
