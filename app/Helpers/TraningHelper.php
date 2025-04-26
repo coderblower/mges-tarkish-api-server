@@ -56,11 +56,11 @@ class TraningHelper {
                 continue;
             }
 
-            // Always assign, even if empty or something else
+            // Assign new designation_id
             $nextDesignationName = $designationNames[$index % $designationCount];
             $nextDesignationId = $designationMap[$nextDesignationName];
 
-            $candidate->designation = $nextDesignationId;
+            $candidate->designation_id = $nextDesignationId;
             $candidate->save();
 
             $index++; // move to next designation
@@ -75,12 +75,12 @@ class TraningHelper {
             return $candidate->designation->name;
         }
 
-        if (is_numeric($candidate->designation)) {
-            $designation = Designation::find($candidate->designation);
+        if (is_numeric($candidate->designation_id)) {
+            $designation = Designation::find($candidate->designation_id);
             return $designation ? $designation->name : null;
         }
 
-        return $candidate->designation;
+        return null;
     }
 
     public static function updateTrainingTitlesForAllCandidates()
