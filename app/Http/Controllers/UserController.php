@@ -509,7 +509,10 @@ Web link: MGES.GLOBAL';
             ->where('role_id', 5)
             ->whereHas('candidate', function ($q) {
                 $q->where('passport', 'REGEXP', '^[A-Za-z]{1,2}[0-9]{4,}$');
-            });
+            })
+            ->orderByRaw('(SELECT designation_id IS NULL FROM candidates WHERE candidates.user_id = users.id) ASC');
+            
+
 
         // Apply creator filter if provided
         if ($request->filled('creator')) {
