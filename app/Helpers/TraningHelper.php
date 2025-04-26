@@ -116,22 +116,6 @@ class TraningHelper {
         return "Training titles updated successfully for all candidates.";
     }
 
-    private static function getDesignationName($candidate)
-    {
-        // If designation is object, get name
-        if (is_object($candidate->designation) && isset($candidate->designation->name)) {
-            return $candidate->designation->name;
-        }
-
-        // If designation is ID, fetch from database
-        if (is_numeric($candidate->designation)) {
-            $designation = Designation::find($candidate->designation);
-            return $designation ? $designation->name : null;
-        }
-
-        // Otherwise, assume it's already a name
-        return $candidate->designation;
-    }
 
     private static function getTrainingTitleByDesignation($designationName)
     {
