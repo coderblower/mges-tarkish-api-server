@@ -30,7 +30,7 @@ class TraningHelper {
             // Decode existing training
             $existingTraining = $candidate->training ? json_decode($candidate->training, true) : null;
     
-            if (empty($existingTraining)) {
+            if (empty($existingTraining['training_title'])) {
                 // Training is fully empty, fill all fields
                 $trainingData = [];
     
