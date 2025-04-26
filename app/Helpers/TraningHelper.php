@@ -3,12 +3,12 @@
 namespace App\Helpers;
 
 use App\Models\Candidate;
+use App\Models\Designation;
 use Illuminate\Support\Facades\Log;
 
 class TraningHelper {
     public static function updateTrainingTitlesForAllCandidates()
     {
-        // Fetch all candidates
         $candidates = Candidate::all();
 
         if ($candidates->isEmpty()) {
@@ -18,8 +18,8 @@ class TraningHelper {
         foreach ($candidates as $candidate) {
             $trainingData = $candidate->training ? json_decode($candidate->training, true) : [];
 
-            // Safely get designation name
-            $designationName = is_object($candidate->designation) ? ($candidate->designation->name ?? null) : $candidate->designation;
+            // Get designation name properly
+            $designationName = self::getDesignationName($candidate);
 
             if (!$designationName) {
                 continue; // Skip if no designation
@@ -36,10 +36,25 @@ class TraningHelper {
         return "Training titles updated successfully for all candidates.";
     }
 
-    private static function getTrainingTitleByDesignation($designation)
+    private static function getDesignationName($candidate)
     {
-        $designationName = is_object($designation) ? ($designation->name ?? null) : $designation;
+        // If designation is object, get name
+        if (is_object($candidate->designation) && isset($candidate->designation->name)) {
+            return $candidate->designation->name;
+        }
 
+        // If designation is ID, fetch from database
+        if (is_numeric($candidate->designation)) {
+            $designation = Designation::find($candidate->designation);
+            return $designation ? $designation->name : null;
+        }
+
+        // Otherwise, assume it's already a name
+        return $candidate->designation;
+    }
+
+    private static function getTrainingTitleByDesignation($designationName)
+    {
         if (!$designationName) {
             return 'General Training';
         }
