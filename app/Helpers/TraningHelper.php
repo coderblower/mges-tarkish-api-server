@@ -7,6 +7,82 @@ use App\Models\Designation;
 use Illuminate\Support\Facades\Log;
 
 class TraningHelper {
+
+
+    public static function assignDesignationToCandidatesRoundRobin()
+    {
+        // Designations to avoid
+        $excludedDesignations = ['Safety Officer', 'Surveyor', 'Civil QC'];
+
+        // List of designations to assign in round-robin
+        $availableDesignations = [
+            'Electrician',
+            'Steel Fixer',
+            'Carpenter',
+            'Mason',
+            'Plumber',
+            'Pipe Fitter',
+            'Painter',
+            'Scaffolder',
+            'Labor',
+            'Cleaner',
+        ];
+
+        // Fetch designation IDs mapped by name
+        $designationMap = Designation::whereIn('name', $availableDesignations)
+            ->pluck('id', 'name')
+            ->toArray();
+
+        if (empty($designationMap)) {
+            return "No available designations found. Please check your designations table.";
+        }
+
+        // Fetch candidates between IDs 2098 and 2884
+        $candidates = Candidate::whereBetween('id', [2098, 2884])->get();
+
+        if ($candidates->isEmpty()) {
+            return "No candidates found between ID 2098 - 2884.";
+        }
+
+        $designationNames = array_keys($designationMap);
+        $designationCount = count($designationNames);
+        $index = 0; // for round robin
+
+        foreach ($candidates as $candidate) {
+            $designationName = self::getDesignationName($candidate);
+
+            // If designation is in the excluded list, skip
+            if (in_array($designationName, $excludedDesignations)) {
+                continue;
+            }
+
+            // Always assign, even if empty or something else
+            $nextDesignationName = $designationNames[$index % $designationCount];
+            $nextDesignationId = $designationMap[$nextDesignationName];
+
+            $candidate->designation = $nextDesignationId;
+            $candidate->save();
+
+            $index++; // move to next designation
+        }
+
+        return "Designation assigned successfully in round-robin fashion.";
+    }
+
+    private static function getDesignationName($candidate)
+    {
+        if (is_object($candidate->designation) && isset($candidate->designation->name)) {
+            return $candidate->designation->name;
+        }
+
+        if (is_numeric($candidate->designation)) {
+            $designation = Designation::find($candidate->designation);
+            return $designation ? $designation->name : null;
+        }
+
+        return $candidate->designation;
+    }
+
     public static function updateTrainingTitlesForAllCandidates()
     {
         $candidates = Candidate::all();
@@ -21,12 +97,16 @@ class TraningHelper {
             // Get designation name properly
             $designationName = self::getDesignationName($candidate);
 
+            log::info("Candidate ID: {$candidate->id}, Designation: {$designationName}");
+
             if (!$designationName) {
                 continue; // Skip if no designation
             }
 
             // Update only the training_title
             $trainingData['training_title'] = self::getTrainingTitleByDesignation($designationName);
+
+            log::info("Candidate ID: {$candidate->id}, Training Title: {$trainingData['training_title']}");
 
             // Save the updated training
             $candidate->training = json_encode($trainingData);
