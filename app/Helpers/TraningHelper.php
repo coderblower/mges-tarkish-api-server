@@ -29,32 +29,21 @@ class TraningHelper {
         foreach ($candidates as $candidate) {
             // Decode existing training
             $existingTraining = $candidate->training ? json_decode($candidate->training, true) : null;
-    
-            if (empty($existingTraining['training_title'])) {
-                // Training is fully empty, fill all fields
-                $trainingData = [];
-    
-                $trainingData['country'] = 'Bangladesh';
-                $trainingData['training_year'] = rand(2018, 2023);
-                $trainingData['institute'] = $trainingCenters->random()->name;
-                $trainingData['duration'] = '3 Months';
-    
+        
+            if (!empty($existingTraining) && empty($existingTraining['training_title'])) {   
+                // Training exists but training_title is missing
+        
+                $trainingData = $existingTraining; // no need to decode again
+        
+                // Safely get designation name
+                $designationName = is_object($candidate->designation) ? ($candidate->designation->name ?? null) : $candidate->designation;
+        
                 // Set the training title based on the candidate's designation
-                $trainingData['training_title'] = self::getTrainingTitleByDesignation($candidate->designation);
-    
-                // Save full training
+                $trainingData['training_title'] = self::getTrainingTitleByDesignation($designationName);
+        
+                // Save updated training
                 $candidate->training = json_encode($trainingData);
                 $candidate->save();
-            } else {
-                // Training exists, check if training_title is missing or empty
-                if (empty($existingTraining['training_title'])) {
-                    // Fill only training_title
-                    $existingTraining['training_title'] = self::getTrainingTitleByDesignation($candidate->designation);
-    
-                    // Save updated training
-                    $candidate->training = json_encode($existingTraining);
-                    $candidate->save();
-                }
             }
         }
     
