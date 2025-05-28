@@ -9,6 +9,9 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject;
+use Illuminate\Support\Facades\DB;
+use App\Models\Candidate;
+
 
 class User extends Authenticatable implements JWTSubject
 {
@@ -47,6 +50,26 @@ class User extends Authenticatable implements JWTSubject
     public function getJWTIdentifier()
     {
         return $this->getKey();
+    }
+
+
+    
+    public static function forceDeleteByEmail($email)
+    {
+        return DB::transaction(function () use ($email) {
+            $user = self::where('email', $email)->first();
+            if (!$user) {
+                return false;
+            }
+
+            // Delete linked candidate(s)
+            Candidate::where('user_id', $user->id)->forceDelete();
+
+            // Force delete user
+            $user->forceDelete();
+
+            return true;
+        });
     }
 
     /**
