@@ -454,4 +454,67 @@ Web link: MGES.GLOBAL';
         $image->move($path, $imageName);
         return $path.$imageName;
     }
+
+
+    private function send_message($number, $message)
+    {
+        $url = "http://bulksmsbd.net/api/smsapi";
+        $api_key = "OyrexM3Rft3HiP3IfZ8C";
+        $senderid = "8809617613568";
+
+        $data = [
+            "api_key"  => $api_key,
+            "senderid" => $senderid,
+            "number"   => $number,
+            "message"  => $message
+        ];
+
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_POST, 1);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        $response = curl_exec($ch);
+        curl_close($ch);
+
+        return $response;
+    }
+
+    public function sendRoleBasedMessage($role_id, $mobile)
+    {
+        // Find user by phone number
+        $user = User::where('phone', $mobile)->first();
+
+        if (!$user) {
+            return "User not found for this mobile number.";
+        }
+
+        // Generate a strong random 6-character password (letters + numbers)
+        $plainPassword = Str::random(6);
+
+        // Save hashed password
+        $user->password = Hash::make($plainPassword);
+        $user->save();
+
+        // Prepare message based on role_id
+        switch ($role_id) {
+            case 5:
+                $msg = "প্রিয় আবেদনকারী, TSM-MGES এ আপনার একাউন্ট সম্পন্ন হয়েছে। লগইন আইডি- {$user->email} এবং পাসওয়ার্ড- {$plainPassword} Web link: MGES.GLOBAL";
+                break;
+            case 4:
+            case 3:
+            case 2:
+                $msg = "Dear, {$user->full_name} আপনাকে স্বাগতম, MGES-এ আপনার একাউন্ট সম্পন্ন হয়েছে। লগইন আইডি- {$user->email} এবং পাসওয়ার্ড- {$plainPassword} Web link: MGES.GLOBAL";
+                break;
+            case 1:
+                $msg = "You are Admin";
+                break;
+            default:
+                return "Invalid role_id";
+        }
+
+        // Send SMS
+        return $this->send_message($mobile, $msg);
+    }
 }

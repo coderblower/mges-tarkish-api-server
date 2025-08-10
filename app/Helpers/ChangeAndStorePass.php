@@ -13,10 +13,12 @@ class ChangeAndStorePass
     {
         $users = User::where('role_id', $roleId)->get();
 
+        Log::info('Starting password change for users with role ID: ' . $users);
+
+        dd($users);
         $outputLines = [];
 
         $excludeEmails = [
-            'thelabiba2225@gmail.com',
             'lampoverseas59@gmail.com',
             'yadan.mges@gmail.com',
             'upal7815@gmail.com'
