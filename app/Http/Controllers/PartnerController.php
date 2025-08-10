@@ -9,7 +9,9 @@ use App\Models\Partner;
 use App\Models\Quota;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 class PartnerController extends Controller
 {
@@ -171,6 +173,9 @@ class PartnerController extends Controller
             ]);
         }
     }
+
+
+    
     public function destroy(Request $request){
         try {
             $data = Partner::where('id', $request->id)->first();
