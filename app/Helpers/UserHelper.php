@@ -9,6 +9,7 @@ class UserHelper
 {
     public static function deleteUserAndFiles($id)
     {
+        
         // Find the user and load their related models
         $data = User::with('createdby', 'candidate')->find($id);  // Find the user and load their creator
         $can = Candidate::where('user_id', $id)->first();  // Find the candidate by user_id
