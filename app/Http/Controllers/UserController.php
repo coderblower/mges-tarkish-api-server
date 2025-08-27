@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Response;
 
 
+
 class UserController extends Controller
 {
     public function __construct()
@@ -492,6 +493,7 @@ Web link: MGES.GLOBAL';
 
 
 
+
     public function searchCandidate(Request $request)
     {
        $startTime = microtime(true);
@@ -506,13 +508,10 @@ Web link: MGES.GLOBAL';
                 'createdBy:id,name',
                 'candidateMedicalTests:result,user_id'
             ])
-            ->where('role_id', 5)
+            ->where('role_id', 5);
             // ->whereHas('candidate', function ($q) {
             //     $q->where('passport', 'REGEXP', '^[A-Za-z]{1,2}[0-9]{4,}$');
-            // })
-            ->orderByRaw('(SELECT designation_id IS NULL FROM candidates WHERE candidates.user_id = users.id) ASC');
-            
-
+            // });
 
         // Apply creator filter if provided
         if ($request->filled('creator')) {
@@ -520,14 +519,12 @@ Web link: MGES.GLOBAL';
         }
 
         // Full-text search on 'country' in 'candidates' table
-        if ($request->filled('country')) {
-            $query->whereExists(function ($q) use ($request) {
-                $q->select(DB::raw(1))
-                  ->from('candidates')
-                  ->whereColumn('candidates.user_id', 'users.id')
-                  ->where('country', $request->country);
-            });
-        }
+        // Full-text search on 'country' in 'candidates' table
+            if ($request->filled('country')) {
+                $query->join('candidates', 'candidates.user_id', '=', 'users.id')
+                    ->where('candidates.country', $request->country);
+            }
+
 
         // Full-text search for phone, email, and passport
         if ($request->filled('phone')) {
@@ -544,10 +541,9 @@ Web link: MGES.GLOBAL';
         }
 
         // Filter candidates created by the specified agent
+        // Filter candidates created by the specified agent
         if ($request->filled('agent')) {
-            $query->whereHas('createdBy', function ($q) use ($request) {
-                $q->where('name', $request->agent);
-            });
+            $query->where('users.created_by', $request->agent);
         }
 
         if ($request->filled('designation')) {
@@ -559,6 +555,7 @@ Web link: MGES.GLOBAL';
                   ->where('designations.name', $request->designation);
             });
         }
+
 
 
 
@@ -614,7 +611,17 @@ Web link: MGES.GLOBAL';
 
         // If not exporting, continue with pagination and JSON response
         $perPage = auth()->user()->role_id == 1 || auth()->user()->role_id == 3 || auth()->user()->role_id == 6  ? 10 : 5;
-        $results = $query->orderBy('updated_at', 'desc')->paginate($perPage);
+
+
+        if ($request->filled('asc') ) {
+            $results = $query->orderBy('updated_at', 'asc')->paginate($perPage);
+        } else if ($request->filled('desc') ) {
+            $results = $query->orderBy('updated_at', 'desc')->paginate($perPage);
+        } else {
+            $results = $query->orderBy('updated_at', 'asc')->paginate($perPage);
+        }
+
+        
 
         // Measure execution time
         $endTime = microtime(true);
@@ -627,6 +634,7 @@ Web link: MGES.GLOBAL';
             'query_time_sec' => $queryTime,
         ]);
     }
+
 
 
 
