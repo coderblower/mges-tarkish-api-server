@@ -521,10 +521,15 @@ Web link: MGES.GLOBAL';
 
         
         // Full-text search on 'country' in 'candidates' table
-            if ($request->filled('country')) {
-                $query->join('candidates', 'candidates.user_id', '=', 'users.id')
-                    ->where('candidates.country', $request->country);
-            }
+        if ($request->filled('country')) {
+            $query->whereExists(function ($q) use ($request) {
+                $q->select(DB::raw(1))
+                  ->from('candidates')
+                  ->whereColumn('candidates.user_id', 'users.id')
+                  ->where('country', $request->country);
+            });
+        }
+
 
 
         // Full-text search for phone, email, and passport
