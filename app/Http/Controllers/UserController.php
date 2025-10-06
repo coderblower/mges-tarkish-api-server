@@ -519,7 +519,7 @@ Web link: MGES.GLOBAL';
             $query->where('created_by', $request->creator);
         }
 
-        // Full-text search on 'country' in 'candidates' table
+        
         // Full-text search on 'country' in 'candidates' table
             if ($request->filled('country')) {
                 $query->join('candidates', 'candidates.user_id', '=', 'users.id')

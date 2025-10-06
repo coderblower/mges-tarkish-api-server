@@ -385,7 +385,7 @@ class PartnerController extends Controller
 
         $data = User::where('role_id', $request->role_id)
         // ->with('createdBy:id,email,name') // Only fetch the `id` and `email` fields for `createdBy`>with('role:id') // Only fetch the `id` field for `role`
-        ->select('users.name', 'users.created_by', 'users.role_id') // Select relevant fields from `users`
+        ->select('users.name', 'users.created_by', 'users.role_id', 'users.id') // Select relevant fields from `users`
         ->get();
 
             return response()->json([
