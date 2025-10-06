@@ -362,6 +362,7 @@ class CandidateController extends Controller
     public function all(Request $request){
 
         try {
+
             $query = User::orderby('id', 'desc')
                 ->where('role_id', 5)
                 ->with('candidate')
@@ -384,11 +385,12 @@ class CandidateController extends Controller
 
 
 
-            if ($request->filled('agent')) {
+           if ($request->filled('agent')) {
                 $query->whereHas('createdBy', function ($q) use ($request) {
-                    $q->where('name', $request->agent);
+                    $q->where('id', $request->agent);
                 });
             }
+
             if ($request->filled('country')) {
                 $query->whereExists(function ($q) use ($request) {
                     $q->select(DB::raw(1))
