@@ -34,4 +34,9 @@ class Candidate extends Model
         return $this->belongsTo(Country::class, 'country'); // Adjust 'country_id' if the column name is different
     }
 
+    public function medicalTests()
+    {
+        return $this->hasMany(CandidateMedicalTest::class, 'candidate_id');
+    }
+
 }
