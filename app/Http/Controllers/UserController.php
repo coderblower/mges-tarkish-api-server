@@ -506,7 +506,7 @@ Web link: MGES.GLOBAL';
                 'candidate:id,user_id,passport,expiry_date,training_status,medical_status,lastName,firstName,current_status,approval_status,qr_code,photo',
                 'createdBy:id,name',
             ])
-            ->where('role_id', 5);
+            ->where('users.role_id', 5);
 
              if (!$request->filled('designation')) {
                     $query->whereHas('candidate', fn($q) => $q->whereNull('reg_no'));
@@ -520,7 +520,7 @@ Web link: MGES.GLOBAL';
 
         // Apply creator filter if provided
         if ($request->filled('creator')) {
-            $query->where('created_by', $request->creator);
+            $query->where('users.created_by', $request->creator);
         }
 
         
@@ -607,7 +607,7 @@ Web link: MGES.GLOBAL';
 
         // If not exporting, continue with pagination and JSON response
         $perPage = auth()->user()->role_id == 1 || auth()->user()->role_id == 3 ? 10 : 5;
-        $results = $query->orderBy('updated_at', 'desc')->paginate($perPage);
+        $results = $query->orderBy('users.updated_at', 'desc')->paginate($perPage);
 
         // Measure execution time
         $endTime = microtime(true);
