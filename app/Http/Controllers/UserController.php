@@ -496,13 +496,15 @@ Web link: MGES.GLOBAL';
 
     public function searchCandidate(Request $request)
     {
+
+        
        $startTime = microtime(true);
 
 
 
 
         // Base query with required relationships and specific fields
-        $query = User::select('id', 'created_by', 'email', 'phone', 'name')
+        $query = User::select('users.id', 'users.created_by', 'users.email', 'users.phone', 'users.name')
             ->with([
                 'candidate:id,user_id,passport,expiry_date,training_status,medical_status,lastName,firstName,current_status,approval_status,qr_code,photo,nid_file,training_file,passport_file',
                 'createdBy:id,name',
@@ -543,7 +545,15 @@ Web link: MGES.GLOBAL';
         // Filter candidates created by the specified agent
         // Filter candidates created by the specified agent
         if ($request->filled('agent')) {
-            $query->where('users.created_by', $request->agent);
+            // If agent is a name, look up the user ID
+            $agentName = $request->agent;
+            $agentUser = User::where('name', $agentName)->first();
+            if ($agentUser) {
+                $query->where('users.created_by', $agentUser->id);
+            } else {
+                // If agent not found, force empty result
+                $query->whereRaw('1=0');
+            }
         }
 
         if ($request->filled('designation')) {
