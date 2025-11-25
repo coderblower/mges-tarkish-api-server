@@ -599,26 +599,22 @@ public function searchTrainingCandidate(Request $request)
 
     $query = User::select('users.id', 'users.created_by', 'users.email', 'users.phone', 'users.name')
         ->with([
-            'candidate:id,user_id,passport,expiry_date,training_status,medical_status,lastName,firstName,current_status,approval_status,qr_code,photo,nid_file,training_file,passport_file,reg_no',
-            'candidate.medicalTests:id,candidate_id,result,user_id', // Fixed nested relationship
+            'candidate:id,user_id,passport,expiry_date,training_status,medical_status,lastName,firstName,current_status,approval_status,qr_code,photo,nid_file,training_file,passport_file,reg_no,country',
+            'candidate.medicalTests:id,candidate_id,result,user_id',
+            'candidate.designation:id,name', // Add designation to eager load
             'createdBy:id,name',
         ])
         ->where('users.role_id', 5);
 
-        if (!$request->filled('designation')) {
-                $query->whereHas('candidate', fn($q) => $q->whereNotNull('reg_no')); // Correct NULL check
-            }
-
-
-
-      
+    if (!$request->filled('designation')) {
+        $query->whereHas('candidate', fn($q) => $q->whereNotNull('reg_no'));
+    }
 
     // Filters
     if ($request->filled('creator')) {
         $query->where('users.created_by', $request->creator);
     }
 
-    // Use whereHas instead of join() — avoids column conflicts
     if ($request->filled('country')) {
         $query->whereHas('candidate', fn($q) => $q->where('country', $request->country));
     }
@@ -626,8 +622,8 @@ public function searchTrainingCandidate(Request $request)
     if ($request->filled('phone')) {
         $searchText = $request->phone;
         $query->where(function ($q) use ($searchText) {
-            $q->whereRaw("MATCH(phone, email) AGAINST(? IN BOOLEAN MODE)", [$searchText])
-              ->orWhereHas('candidate', fn($q) => $q->whereRaw("MATCH(passport) AGAINST(? IN BOOLEAN MODE)", [$searchText]));
+            $q->whereRaw("MATCH(users.phone, users.email) AGAINST(? IN BOOLEAN MODE)", [$searchText])
+              ->orWhereHas('candidate', fn($subQ) => $subQ->whereRaw("MATCH(passport) AGAINST(? IN BOOLEAN MODE)", [$searchText]));
         });
     }
 
@@ -646,14 +642,16 @@ public function searchTrainingCandidate(Request $request)
 
         return Response::stream(function () use ($query, &$serialNumber) {
             $handle = fopen('php://output', 'w');
-            ob_end_clean();
+            if (ob_get_level() > 0) {
+                ob_end_clean();
+            }
 
             fputcsv($handle, [
                 'SL', 'First Name', 'Last Name', 'Passport', 'Created By',
                 'Training Status', 'Medical Results', 'Passport Expiry', 'Phone'
             ]);
 
-            $query->orderBy('updated_at', 'desc')->chunk(100, function ($users) use ($handle, &$serialNumber) {
+            $query->orderBy('users.updated_at', 'desc')->chunk(100, function ($users) use ($handle, &$serialNumber) {
                 foreach ($users as $user) {
                     $medicalResults = $user->candidate?->medicalTests->pluck('result')->implode(', ') ?? '';
                     
@@ -690,7 +688,6 @@ public function searchTrainingCandidate(Request $request)
         'query_time_sec' => $queryTime,
     ]);
 }
-
 
 
     public function profileUpdate(Request $request){
