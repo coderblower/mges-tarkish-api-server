@@ -597,7 +597,7 @@ public function searchTrainingCandidate(Request $request)
 {
     $startTime = microtime(true);
 
-    $query = User::select('id', 'created_by', 'email', 'phone', 'name')
+    $query = User::select('users.id', 'users.created_by', 'users.email', 'users.phone', 'users.name')
         ->with([
             'candidate:id,user_id,passport,expiry_date,training_status,medical_status,lastName,firstName,current_status,approval_status,qr_code,photo,nid_file,training_file,passport_file,reg_no',
             'candidate.medicalTests:id,candidate_id,result,user_id', // Fixed nested relationship
