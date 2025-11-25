@@ -595,6 +595,7 @@ Web link: MGES.GLOBAL';
 
 public function searchTrainingCandidate(Request $request)
 {
+    dd($request->all());
     $startTime = microtime(true);
 
     $query = User::select('users.id', 'users.created_by', 'users.email', 'users.phone', 'users.name')
