@@ -493,7 +493,6 @@ Web link: MGES.GLOBAL';
 
 
 
-
     public function searchCandidate(Request $request)
     {
        $startTime = microtime(true);
@@ -502,17 +501,22 @@ Web link: MGES.GLOBAL';
 
 
         // Base query with required relationships and specific fields
-        $query = User::select('id', 'created_by', 'email', 'phone', 'name')
+        $query = User::select('users.id', 'users.created_by')
             ->with([
-                'candidate:id,user_id,passport,expiry_date,training_status,medical_status,lastName,firstName,current_status,approval_status,qr_code,photo,nid_file,training_file,passport_file',
+                'candidate:id,user_id,passport,expiry_date,training_status,medical_status,lastName,firstName,current_status,approval_status,qr_code,photo',
                 'createdBy:id,name',
-                'candidateMedicalTests:result,user_id'
             ])
-            ->where('role_id', 5)
-            ->whereHas('candidate', fn ($q) =>$q->where('reg_no', '=', null));
-            // ->whereHas('candidate', function ($q) {
-            //     $q->where('passport', 'REGEXP', '^[A-Za-z]{1,2}[0-9]{4,}$');
-            // });
+            ->where('role_id', 5);
+
+             if (!$request->filled('designation')) {
+                    $query->whereHas('candidate', fn($q) => $q->whereNull('reg_no'));
+                }
+
+
+    
+
+
+
 
         // Apply creator filter if provided
         if ($request->filled('creator')) {
@@ -520,6 +524,7 @@ Web link: MGES.GLOBAL';
         }
 
         
+
         // Full-text search on 'country' in 'candidates' table
         if ($request->filled('country')) {
             $query->whereExists(function ($q) use ($request) {
@@ -529,8 +534,6 @@ Web link: MGES.GLOBAL';
                   ->where('country', $request->country);
             });
         }
-
-
 
         // Full-text search for phone, email, and passport
         if ($request->filled('phone')) {
@@ -547,21 +550,11 @@ Web link: MGES.GLOBAL';
         }
 
         // Filter candidates created by the specified agent
-        // Filter candidates created by the specified agent
         if ($request->filled('agent')) {
-            $query->where('users.created_by', $request->agent);
-        }
-
-        if ($request->filled('designation')) {
-            $query->whereExists(function ($q) use ($request) {
-                $q->select(DB::raw(1))
-                  ->from('candidates')
-                  ->join('designations', 'candidates.designation_id', '=', 'designations.id')
-                  ->whereColumn('candidates.user_id', 'users.id')
-                  ->where('designations.name', $request->designation);
+            $query->whereHas('createdBy', function ($q) use ($request) {
+                $q->where('name', $request->agent);
             });
         }
-
 
 
 
@@ -579,7 +572,7 @@ Web link: MGES.GLOBAL';
                 // Write CSV header
                 fputcsv($handle, [
                     'SL', 'First Name', 'Last Name', 'Passport', 'Created By',
-                    'Training Status', 'Medical Status', 'Passport Expiry Date', 'phone',
+                    'Training Status', 'Medical Status', 'Passport Expiry Date'
                 ]);
 
                 // Fetch data and write each row to the CSV
@@ -587,8 +580,7 @@ Web link: MGES.GLOBAL';
 
                     foreach ($users as $user) {
 
-                        $medicalTests = $user->candidateMedicalTests->pluck('result')->implode(', ') ?? null;
-
+                        Log::info("message", ['user'=>$user]);
 
                         fputcsv($handle, [
                             $serialNumber++,
@@ -597,11 +589,9 @@ Web link: MGES.GLOBAL';
                             $user->candidate?->passport ?? null,
                             $user->createdBy?->name ?? null,
                             $user->candidate?->training_status ?? null,
-                            $medicalTests,
+                            $user->candidate?->medical_status ?? null,
                             $user->candidate?->expiry_date ?? null,
-                            $user->phone,
                         ]);
-                        
                     }
                 });
 
@@ -616,30 +606,19 @@ Web link: MGES.GLOBAL';
 
 
         // If not exporting, continue with pagination and JSON response
-        $perPage = auth()->user()->role_id == 1 || auth()->user()->role_id == 3 || auth()->user()->role_id == 6  ? 10 : 5;
-
-
-        if ($request->filled('asc') ) {
-            $results = $query->orderBy('updated_at', 'asc')->paginate($perPage);
-        } else if ($request->filled('desc') ) {
-            $results = $query->orderBy('updated_at', 'desc')->paginate($perPage);
-        } else {
-            $results = $query->orderBy('updated_at', 'asc')->paginate($perPage);
-        }
-
-        
+        $perPage = auth()->user()->role_id == 1 || auth()->user()->role_id == 3 ? 10 : 5;
+        $results = $query->orderBy('updated_at', 'desc')->paginate($perPage);
 
         // Measure execution time
         $endTime = microtime(true);
         $queryTime = round(($endTime - $startTime), 2);
-
-        Log::info('data', ['data' => $results]);
 
         return response()->json([
             'data' => $results,
             'query_time_sec' => $queryTime,
         ]);
     }
+
 
 
     
