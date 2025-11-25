@@ -478,12 +478,15 @@ Web link: MGES.GLOBAL';
                 'candidate:id,user_id,passport,expiry_date,training_status,medical_status,lastName,firstName,current_status,approval_status,qr_code,photo',
                 'createdBy:id,name',
             ])
-            ->where('role_id', 5);
+            ->where('role_id', 5)
+            ->whereHas('candidate', fn($q) => $q->whereNull('reg_no')); // Correct NULL check
 
         // Apply creator filter if provided
         if ($request->filled('creator')) {
             $query->where('created_by', $request->creator);
         }
+
+        
 
         // Full-text search on 'country' in 'candidates' table
         if ($request->filled('country')) {
@@ -579,6 +582,98 @@ Web link: MGES.GLOBAL';
         ]);
     }
 
+
+
+public function searchTrainingCandidate(Request $request)
+{
+    $startTime = microtime(true);
+
+    $query = User::select('id', 'created_by', 'email', 'phone', 'name')
+        ->with([
+            'candidate:id,user_id,passport,expiry_date,training_status,medical_status,lastName,firstName,current_status,approval_status,qr_code,photo,nid_file,training_file,passport_file,reg_no',
+            'candidate.medicalTests:id,candidate_id,result,user_id', // Fixed nested relationship
+            'createdBy:id,name',
+        ])
+        ->where('role_id', 5)
+        ->whereHas('candidate', fn($q) => $q->whereNotNull('reg_no')); // Correct NULL check
+
+    // Filters
+    if ($request->filled('creator')) {
+        $query->where('created_by', $request->creator);
+    }
+
+    // Use whereHas instead of join() — avoids column conflicts
+    if ($request->filled('country')) {
+        $query->whereHas('candidate', fn($q) => $q->where('country', $request->country));
+    }
+
+    if ($request->filled('phone')) {
+        $searchText = $request->phone;
+        $query->where(function ($q) use ($searchText) {
+            $q->whereRaw("MATCH(phone, email) AGAINST(? IN BOOLEAN MODE)", [$searchText])
+              ->orWhereHas('candidate', fn($q) => $q->whereRaw("MATCH(passport) AGAINST(? IN BOOLEAN MODE)", [$searchText]));
+        });
+    }
+
+    if ($request->filled('agent')) {
+        $query->whereHas('createdBy', fn($q) => $q->where('name', 'like', "%{$request->agent}%"));
+    }
+
+    if ($request->filled('designation')) {
+        $query->whereHas('candidate.designation', fn($q) => $q->where('name', $request->designation));
+    }
+
+    // Export CSV
+    if ($request->boolean('export_all')) {
+        $filename = "training_candidates_export_" . now()->format('Y_m_d_His') . ".csv";
+        $serialNumber = 1;
+
+        return Response::stream(function () use ($query, &$serialNumber) {
+            $handle = fopen('php://output', 'w');
+            ob_end_clean();
+
+            fputcsv($handle, [
+                'SL', 'First Name', 'Last Name', 'Passport', 'Created By',
+                'Training Status', 'Medical Results', 'Passport Expiry', 'Phone'
+            ]);
+
+            $query->orderBy('updated_at', 'desc')->chunk(100, function ($users) use ($handle, &$serialNumber) {
+                foreach ($users as $user) {
+                    $medicalResults = $user->candidate?->medicalTests->pluck('result')->implode(', ') ?? '';
+                    
+                    fputcsv($handle, [
+                        $serialNumber++,
+                        $user->candidate?->firstName ?? '',
+                        $user->candidate?->lastName ?? '',
+                        $user->candidate?->passport ?? '',
+                        $user->createdBy?->name ?? '',
+                        $user->candidate?->training_status ?? '',
+                        $medicalResults,
+                        $user->candidate?->expiry_date ?? '',
+                        $user->phone ?? '',
+                    ]);
+                }
+            });
+
+            fclose($handle);
+        }, 200, [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+        ]);
+    }
+
+    // Pagination
+    $perPage = in_array(auth()->user()->role_id, [1, 3, 6]) ? 10 : 5;
+    $order = $request->filled('desc') ? 'desc' : 'asc';
+    $results = $query->orderBy('updated_at', $order)->paginate($perPage);
+
+    $queryTime = round(microtime(true) - $startTime, 2);
+
+    return response()->json([
+        'data' => $results,
+        'query_time_sec' => $queryTime,
+    ]);
+}
 
 
 

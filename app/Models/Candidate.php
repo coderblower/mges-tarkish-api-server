@@ -20,4 +20,8 @@ class Candidate extends Model
     {
         return $this->belongsTo(Designation::class,'designation_id', 'id');
     }
+    public function medicalTests()
+    {
+        return $this->hasMany(CandidateMedicalTest::class, 'candidate_id');
+    }
 }
