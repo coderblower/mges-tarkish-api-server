@@ -473,7 +473,7 @@ Web link: MGES.GLOBAL';
 
 
         // Base query with required relationships and specific fields
-        $query = User::select('id', 'created_by')
+        $query = User::select('users.id', 'users.created_by')
             ->with([
                 'candidate:id,user_id,passport,expiry_date,training_status,medical_status,lastName,firstName,current_status,approval_status,qr_code,photo',
                 'createdBy:id,name',
