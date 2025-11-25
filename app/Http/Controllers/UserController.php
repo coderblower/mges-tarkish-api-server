@@ -478,8 +478,17 @@ Web link: MGES.GLOBAL';
                 'candidate:id,user_id,passport,expiry_date,training_status,medical_status,lastName,firstName,current_status,approval_status,qr_code,photo',
                 'createdBy:id,name',
             ])
-            ->where('role_id', 5)
-            ->whereHas('candidate', fn($q) => $q->whereNull('reg_no')); // Correct NULL check
+            ->where('role_id', 5);
+
+             if (!$request->filled('designation')) {
+                    $query->whereHas('candidate', fn($q) => $q->whereNull('reg_no'));
+                }
+
+
+    
+
+
+
 
         // Apply creator filter if provided
         if ($request->filled('creator')) {
@@ -594,8 +603,15 @@ public function searchTrainingCandidate(Request $request)
             'candidate.medicalTests:id,candidate_id,result,user_id', // Fixed nested relationship
             'createdBy:id,name',
         ])
-        ->where('role_id', 5)
-        ->whereHas('candidate', fn($q) => $q->whereNotNull('reg_no')); // Correct NULL check
+        ->where('role_id', 5);
+
+        if (!$request->filled('designation')) {
+                $query->whereHas('candidate', fn($q) => $q->whereNotNull('reg_no')); // Correct NULL check
+            }
+
+
+
+      
 
     // Filters
     if ($request->filled('creator')) {

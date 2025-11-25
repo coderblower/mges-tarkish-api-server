@@ -88,20 +88,26 @@ class DesignationController extends Controller
 //            ]);
 //        }
 //    }
+  
+
     public function all(){
-        try {
-            $data = Designation::orderby('id','desc')->get();
-            return response()->json([
-                'success' => true,
-                'message' => 'Successful!',
-                'data' => $data
-            ]);
-        }catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'failed!',
-                'error' => $e->getMessage(),
-            ]);
-        }
+    try {
+        $data = Designation::withCount('candidates')
+            ->orderby('id','desc')
+            ->get();
+        return response()->json([
+            'success' => true,
+            'message' => 'Successful!',
+            'data' => $data
+        ]);
+    }catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'failed!',
+            'error' => $e->getMessage(),
+        ]);
     }
+}
+
+
 }
