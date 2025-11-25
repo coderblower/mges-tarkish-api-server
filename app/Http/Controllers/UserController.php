@@ -603,7 +603,7 @@ public function searchTrainingCandidate(Request $request)
             'candidate.medicalTests:id,candidate_id,result,user_id', // Fixed nested relationship
             'createdBy:id,name',
         ])
-        ->where('role_id', 5);
+        ->where('users.role_id', 5);
 
         if (!$request->filled('designation')) {
                 $query->whereHas('candidate', fn($q) => $q->whereNotNull('reg_no')); // Correct NULL check
@@ -615,7 +615,7 @@ public function searchTrainingCandidate(Request $request)
 
     // Filters
     if ($request->filled('creator')) {
-        $query->where('created_by', $request->creator);
+        $query->where('users.created_by', $request->creator);
     }
 
     // Use whereHas instead of join() — avoids column conflicts
@@ -681,7 +681,7 @@ public function searchTrainingCandidate(Request $request)
     // Pagination
     $perPage = in_array(auth()->user()->role_id, [1, 3, 6]) ? 10 : 5;
     $order = $request->filled('desc') ? 'desc' : 'asc';
-    $results = $query->orderBy('updated_at', $order)->paginate($perPage);
+    $results = $query->orderBy('users.updated_at', $order)->paginate($perPage);
 
     $queryTime = round(microtime(true) - $startTime, 2);
 
