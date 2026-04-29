@@ -577,6 +577,12 @@ Web link: MGES.GLOBAL';
                     ->chunk(100, function ($users) use ($handle, &$serialNumber) {
 
                         foreach ($users as $user) {
+
+                         if (!$user->candidate || empty($user->candidate->passport)) {
+                            continue;
+                        }
+
+
                             fputcsv($handle, [
                                 $serialNumber++,
                                 $user->candidate?->firstName,
