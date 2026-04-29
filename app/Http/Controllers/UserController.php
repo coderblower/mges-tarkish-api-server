@@ -564,38 +564,34 @@ Web link: MGES.GLOBAL';
 
             $serialNumber = 1;
 
-            // Create a StreamedResponse to write CSV data
-            $response = Response::stream(function () use ($query, $serialNumber) {
-                ob_end_clean(); // Clear any previous output
+            $response = Response::stream(function () use ($query, &$serialNumber) {
+                ob_end_clean();
                 $handle = fopen('php://output', 'w');
 
-                // Write CSV header
                 fputcsv($handle, [
                     'SL', 'First Name', 'Last Name', 'Passport', 'Created By',
                     'Training Status', 'Medical Status', 'Passport Expiry Date'
                 ]);
 
-                // Fetch data and write each row to the CSV
-                $query->orderBy('updated_at', 'desc')->chunk(100, function ($users) use ($handle, $serialNumber) {
+                $query->orderBy('updated_at', 'desc')
+                    ->chunk(100, function ($users) use ($handle, &$serialNumber) {
 
-                    foreach ($users as $user) {
-
-                        Log::info("message", ['user'=>$user]);
-
-                        fputcsv($handle, [
-                            $serialNumber++,
-                            $user->candidate?->firstName,
-                            $user->candidate?->lastName,
-                            $user->candidate?->passport ?? null,
-                            $user->createdBy?->name ?? null,
-                            $user->candidate?->training_status ?? null,
-                            $user->candidate?->medical_status ?? null,
-                            $user->candidate?->expiry_date ?? null,
-                        ]);
-                    }
-                });
+                        foreach ($users as $user) {
+                            fputcsv($handle, [
+                                $serialNumber++,
+                                $user->candidate?->firstName,
+                                $user->candidate?->lastName,
+                                $user->candidate?->passport,
+                                $user->createdBy?->name,
+                                $user->candidate?->training_status,
+                                $user->candidate?->medical_status,
+                                $user->candidate?->expiry_date,
+                            ]);
+                        }
+                    });
 
                 fclose($handle);
+
             }, 200, [
                 "Content-Type" => "text/csv",
                 "Content-Disposition" => "attachment; filename=$filename",
