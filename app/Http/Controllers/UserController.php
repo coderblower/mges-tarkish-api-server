@@ -508,9 +508,9 @@ Web link: MGES.GLOBAL';
             ])
             ->where('users.role_id', 5);
 
-             if (!$request->filled('designation')) {
-                    $query->whereHas('candidate', fn($q) => $q->whereNull('reg_no'));
-                }
+            //  if (!$request->filled('designation')) {
+            //         $query->whereHas('candidate', fn($q) => $q->whereNull('reg_no'));
+            //     }
 
 
     
