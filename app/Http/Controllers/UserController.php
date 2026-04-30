@@ -549,6 +549,12 @@ Web link: MGES.GLOBAL';
         //     });
         // }
 
+        // DESIGNATION FILTER (FIX)
+        if ($request->filled('designation')) {
+            $query->whereHas('candidate.designation', function ($q) use ($request) {
+                $q->where('name', 'like', '%' . $request->designation . '%');
+            });
+        }
 
         if ($request->filled('phone')) {
 
