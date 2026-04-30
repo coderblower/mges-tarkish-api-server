@@ -536,75 +536,104 @@ Web link: MGES.GLOBAL';
         }
 
         // Full-text search for phone, email, and passport
+        // if ($request->filled('phone')) {
+        //     $searchText = $request->phone;
+        //     $query->where(function ($q) use ($searchText) {
+        //         $q->whereRaw("MATCH(phone, email) AGAINST(? IN BOOLEAN MODE)", [$searchText])
+        //           ->orWhereExists(function ($q) use ($searchText) {
+        //               $q->select(DB::raw(1))
+        //                 ->from('candidates')
+        //                 ->whereColumn('candidates.user_id', 'users.id')
+        //                 ->whereRaw("MATCH(passport) AGAINST(? IN BOOLEAN MODE)", [$searchText]);
+        //           });
+        //     });
+        // }
+
+
         if ($request->filled('phone')) {
+
             $searchText = $request->phone;
+
             $query->where(function ($q) use ($searchText) {
+
+                // 1. phone + email (users table fulltext)
                 $q->whereRaw("MATCH(phone, email) AGAINST(? IN BOOLEAN MODE)", [$searchText])
-                  ->orWhereExists(function ($q) use ($searchText) {
-                      $q->select(DB::raw(1))
-                        ->from('candidates')
-                        ->whereColumn('candidates.user_id', 'users.id')
-                        ->whereRaw("MATCH(passport) AGAINST(? IN BOOLEAN MODE)", [$searchText]);
-                  });
+
+                // 2. passport (candidates table)
+                ->orWhereExists(function ($q) use ($searchText) {
+                    $q->select(DB::raw(1))
+                    ->from('candidates')
+                    ->whereColumn('candidates.user_id', 'users.id')
+                    ->whereRaw("MATCH(passport) AGAINST(? IN BOOLEAN MODE)", [$searchText]);
+                })
+
+                // 3. designation name (via designation_id)
+                ->orWhereExists(function ($q) use ($searchText) {
+                    $q->select(DB::raw(1))
+                    ->from('candidates')
+                    ->join('designations', 'designations.id', '=', 'candidates.designation_id')
+                    ->whereColumn('candidates.user_id', 'users.id')
+                    ->where('designations.name', 'LIKE', "%{$searchText}%");
+                });
             });
         }
 
-        // Filter candidates created by the specified agent
-        if ($request->filled('agent')) {
-            $query->whereHas('createdBy', function ($q) use ($request) {
-                $q->where('name', $request->agent);
-            });
-        }
-
-
-
-        // Export all data as CSV if requested
-        if ($request->filled('export_all') && $request->export_all == true) {
-            $filename = "candidates_export_" . now()->format('Y_m_d_H_i_s') . ".csv";
-
-            $serialNumber = 1;
-
-            $response = Response::stream(function () use ($query, &$serialNumber) {
-                ob_end_clean();
-                $handle = fopen('php://output', 'w');
-
-                fputcsv($handle, [
-                    'SL', 'First Name', 'Last Name', 'Passport', 'Created By',
-                    'Training Status', 'Medical Status', 'Passport Expiry Date'
-                ]);
-
-                $query->orderBy('updated_at', 'desc')
-                    ->chunk(100, function ($users) use ($handle, &$serialNumber) {
-
-                        foreach ($users as $user) {
-
-                         if (!$user->candidate || empty($user->candidate->passport)) {
-                            continue;
-                        }
-
-
-                            fputcsv($handle, [
-                                $serialNumber++,
-                                $user->candidate?->firstName,
-                                $user->candidate?->lastName,
-                                $user->candidate?->passport,
-                                $user->createdBy?->name,
-                                $user->candidate?->training_status,
-                                $user->candidate?->medical_status,
-                                $user->candidate?->expiry_date,
-                            ]);
-                        }
+                // Filter candidates created by the specified agent
+                if ($request->filled('agent')) {
+                    $query->whereHas('createdBy', function ($q) use ($request) {
+                        $q->where('name', $request->agent);
                     });
+                }
 
-                fclose($handle);
 
-            }, 200, [
-                "Content-Type" => "text/csv",
-                "Content-Disposition" => "attachment; filename=$filename",
-            ]);
 
-            return $response;
-        }
+                // Export all data as CSV if requested
+                if ($request->filled('export_all') && $request->export_all == true) {
+                    $filename = "candidates_export_" . now()->format('Y_m_d_H_i_s') . ".csv";
+
+                    $serialNumber = 1;
+
+                    $response = Response::stream(function () use ($query, &$serialNumber) {
+                        ob_end_clean();
+                        $handle = fopen('php://output', 'w');
+
+                        fputcsv($handle, [
+                            'SL', 'First Name', 'Last Name', 'Passport', 'Created By',
+                            'Training Status', 'Medical Status', 'Passport Expiry Date'
+                        ]);
+
+                        $query->orderBy('updated_at', 'desc')
+                            ->chunk(100, function ($users) use ($handle, &$serialNumber) {
+
+                                foreach ($users as $user) {
+
+                                if (!$user->candidate || empty($user->candidate->passport)) {
+                                    continue;
+                                }
+
+
+                                    fputcsv($handle, [
+                                        $serialNumber++,
+                                        $user->candidate?->firstName,
+                                        $user->candidate?->lastName,
+                                        $user->candidate?->passport,
+                                        $user->createdBy?->name,
+                                        $user->candidate?->training_status,
+                                        $user->candidate?->medical_status,
+                                        $user->candidate?->expiry_date,
+                                    ]);
+                                }
+                            });
+
+                        fclose($handle);
+
+                    }, 200, [
+                        "Content-Type" => "text/csv",
+                        "Content-Disposition" => "attachment; filename=$filename",
+                    ]);
+
+                    return $response;
+                }
 
 
         // If not exporting, continue with pagination and JSON response
