@@ -5,7 +5,13 @@ return [
 
     'allowed_methods' => ['*'],  // Allow all HTTP methods
 
-    'allowed_origins' => ['http://localhost:5173', 'https://mges.global', 'https://www.mges.global'],  // Allow only your front-end origin
+    'allowed_origins' => [
+    'http://localhost:5173',
+    'https://mges.global',
+    'https://www.mges.global',
+    'https://candidate.mges.global', // ✅ ADD THIS
+    'https://www.candidate.mges.global', // ✅ ADD THIS
+],
 
     'allowed_headers' => ['*'],  // Allow all headers
 
