@@ -3,10 +3,13 @@
 
 /vendor
 /.well-known
-.env
+.env*
 node_modules/
 *log
 .DS_Store
 /dist
 /build
 /public
+*.sql
+*.pdf
+storage/*.csv
