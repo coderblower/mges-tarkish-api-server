@@ -501,9 +501,10 @@ Web link: MGES.GLOBAL';
 
 
         // Base query with required relationships and specific fields
-        $query = User::select('users.id', 'users.created_by')
+        $query = User::select('users.id', 'users.name', 'users.created_by', 'users.updated_at')
+            ->leftJoin('candidates', 'candidates.user_id', '=', 'users.id')
             ->with([
-                'candidate:id,user_id,passport,expiry_date,training_status,medical_status,lastName,firstName,current_status,approval_status,qr_code,photo',
+                'candidate:id,user_id,passport,expiry_date,training_status,medical_status,lastName,firstName,current_status,approval_status,qr_code,photo,passport_file,nid_file,training_file,academic_file,experience_file',
                 'createdBy:id,name',
             ])
             ->where('users.role_id', 5);
@@ -511,7 +512,6 @@ Web link: MGES.GLOBAL';
             //  if (!$request->filled('designation')) {
             //         $query->whereHas('candidate', fn($q) => $q->whereNull('reg_no'));
             //     }
-
 
     
 
@@ -527,12 +527,7 @@ Web link: MGES.GLOBAL';
 
         // Full-text search on 'country' in 'candidates' table
         if ($request->filled('country')) {
-            $query->whereExists(function ($q) use ($request) {
-                $q->select(DB::raw(1))
-                  ->from('candidates')
-                  ->whereColumn('candidates.user_id', 'users.id')
-                  ->where('country', $request->country);
-            });
+            $query->where('candidates.country', $request->country);
         }
 
         // Full-text search for phone, email, and passport
@@ -563,22 +558,22 @@ Web link: MGES.GLOBAL';
             $query->where(function ($q) use ($searchText) {
 
                 // 1. phone + email (users table fulltext)
-                $q->whereRaw("MATCH(phone, email) AGAINST(? IN BOOLEAN MODE)", [$searchText])
+                $q->whereRaw("MATCH(users.phone, users.email) AGAINST(? IN BOOLEAN MODE)", [$searchText])
 
                 // 2. passport (candidates table)
                 ->orWhereExists(function ($q) use ($searchText) {
                     $q->select(DB::raw(1))
-                    ->from('candidates')
-                    ->whereColumn('candidates.user_id', 'users.id')
-                    ->whereRaw("MATCH(passport) AGAINST(? IN BOOLEAN MODE)", [$searchText]);
+                    ->from('candidates as c_search')
+                    ->whereColumn('c_search.user_id', 'users.id')
+                    ->whereRaw("MATCH(c_search.passport) AGAINST(? IN BOOLEAN MODE)", [$searchText]);
                 })
 
                 // 3. designation name (via designation_id)
                 ->orWhereExists(function ($q) use ($searchText) {
                     $q->select(DB::raw(1))
-                    ->from('candidates')
-                    ->join('designations', 'designations.id', '=', 'candidates.designation_id')
-                    ->whereColumn('candidates.user_id', 'users.id')
+                    ->from('candidates as c_sub')
+                    ->join('designations', 'designations.id', '=', 'c_sub.designation_id')
+                    ->whereColumn('c_sub.user_id', 'users.id')
                     ->where('designations.name', 'LIKE', "%{$searchText}%");
                 });
             });
@@ -591,6 +586,21 @@ Web link: MGES.GLOBAL';
                     });
                 }
 
+
+
+        // Priority ordering: Candidates with photo AND all files intact come first,
+        // then candidates with photo, then sorted by update date.
+        $hasCompleteFilesSql = '(CASE WHEN (candidates.photo IS NOT NULL AND candidates.photo != "") 
+            AND (candidates.passport_file IS NOT NULL AND candidates.passport_file != "") 
+            AND (candidates.nid_file IS NOT NULL AND candidates.nid_file != "") 
+            AND (candidates.training_file IS NOT NULL AND candidates.training_file != "") THEN 1 ELSE 0 END)';
+        $hasPhotoSql = '(CASE WHEN (candidates.photo IS NOT NULL AND candidates.photo != "") THEN 1 ELSE 0 END)';
+
+        $order = $request->filled('asc') ? 'asc' : 'desc';
+
+        $query->orderByRaw("$hasCompleteFilesSql DESC")
+              ->orderByRaw("$hasPhotoSql DESC")
+              ->orderBy('users.updated_at', $order);
 
 
                 // Export all data as CSV if requested
@@ -608,8 +618,7 @@ Web link: MGES.GLOBAL';
                             'Training Status', 'Medical Status', 'Passport Expiry Date'
                         ]);
 
-                        $query->orderBy('updated_at', 'desc')
-                            ->chunk(100, function ($users) use ($handle, &$serialNumber) {
+                        $query->chunk(100, function ($users) use ($handle, &$serialNumber) {
 
                                 foreach ($users as $user) {
 
