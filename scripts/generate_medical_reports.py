@@ -174,9 +174,9 @@ def generate_report_image(record):
     draw = ImageDraw.Draw(img)
 
     # 1. ID Number
-    prefix = "HU" if country_name == "Hungary" else ("RU" if country_name == "Russia" else "TU")
+    prefix = "OM" if country_name == "Oman" else ("HU" if country_name == "Hungary" else ("RU" if country_name == "Russia" else "TU"))
     seq_num = (int(cmt_id) % 90) + 10
-    id_no = f"{prefix}-24-12-{seq_num}" if country_name == "Hungary" else f"{prefix}-24-03-{seq_num}"
+    id_no = f"{prefix}-24-12-{seq_num}" if country_name in ["Hungary", "Oman"] else f"{prefix}-24-03-{seq_num}"
     draw.text((250, 237), id_no, fill="black", font=font_id)
 
     # 2. Country Name
@@ -347,7 +347,9 @@ def process_candidates(country_filter=None):
 
 if __name__ == "__main__":
     target_country = None
-    if len(sys.argv) > 1 and sys.argv[1].lower() in ["hungary", "3"]:
+    if len(sys.argv) > 1 and sys.argv[1].lower() in ["oman", "4"]:
+        target_country = 4
+    elif len(sys.argv) > 1 and sys.argv[1].lower() in ["hungary", "3"]:
         target_country = 3
     elif len(sys.argv) > 1 and sys.argv[1].lower() in ["turkey", "2"]:
         target_country = 2
